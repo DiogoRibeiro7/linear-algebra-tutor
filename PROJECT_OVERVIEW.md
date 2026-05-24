@@ -210,7 +210,7 @@ Problem Attempt → Evaluate → Update Score → Recommend Next → Display
 ```bash
 ./setup.sh
 # Backend: python -m app.main
-# Frontend: npm run dev
+# Frontend: yarn dev
 ```
 
 ### Docker (Production)

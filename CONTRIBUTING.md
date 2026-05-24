@@ -48,7 +48,7 @@ Thank you for your interest in contributing! This project aims to provide high-q
    
    # Frontend tests
    cd frontend
-   npm test
+   yarn test
    ```
 
 5. **Submit a pull request**

@@ -66,7 +66,7 @@ python scripts/generate_embeddings.py
 cd backend && source venv/bin/activate && python -m app.main
 
 # Terminal 2 - Frontend
-cd frontend && npm run dev
+cd frontend && yarn dev
 
 # Open: http://localhost:5173
 ```
@@ -234,7 +234,7 @@ License:              MIT
 - **AI:** Claude API, RAG, Embeddings, Prompt Engineering
 - **Database:** PostgreSQL, Redis, SQLite
 - **DevOps:** Docker, Docker Compose, Nginx, CI/CD
-- **Tools:** Git, GitHub Actions, npm, pip
+- **Tools:** Git, GitHub Actions, Yarn, pip
 
 ---
 
@@ -242,7 +242,7 @@ License:              MIT
 
 ### Development (Immediate)
 ```bash
-./setup.sh && npm run dev
+./setup.sh && (cd frontend && yarn dev)
 ```
 **Cost:** Free
 **Time:** 5 minutes

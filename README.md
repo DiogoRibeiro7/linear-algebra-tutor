@@ -84,8 +84,11 @@ cp ../.env.example .env
 ```bash
 cd frontend
 
+# Activate the pinned Yarn version (one-time, ships with Node 20+)
+corepack enable
+
 # Install dependencies
-npm install
+yarn install --immutable
 
 # Create .env file (optional, for custom API URL)
 echo "VITE_API_URL=http://localhost:8000/api/v1" > .env
@@ -125,7 +128,7 @@ python -m app.main
 **Terminal 2 - Frontend:**
 ```bash
 cd frontend
-npm run dev
+yarn dev
 # Frontend will run on http://localhost:5173
 ```
 

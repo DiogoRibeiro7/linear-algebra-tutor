@@ -326,8 +326,8 @@ When contributing to this project:
 - Kill process using the port
 
 **Frontend build fails**
-- Delete node_modules and package-lock.json
-- Run `npm install` again
+- Delete `node_modules` and `yarn.lock`
+- Run `yarn install` again
 - Check Node.js version (need 20+)
 
 ## Contact

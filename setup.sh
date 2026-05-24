@@ -27,13 +27,13 @@ check_prerequisites() {
     fi
     echo "✓ Node.js $(node --version)"
     
-    # npm
-    if ! command -v npm &> /dev/null; then
-        echo "❌ npm not found. Please install npm"
+    # Corepack (ships with Node 16.10+) — needed for the pinned Yarn version
+    if ! command -v corepack &> /dev/null; then
+        echo "❌ corepack not found. Please install Node.js 20+ (corepack ships with it)"
         exit 1
     fi
-    echo "✓ npm $(npm --version)"
-    
+    echo "✓ Corepack $(corepack --version)"
+
     echo ""
 }
 
@@ -66,11 +66,14 @@ setup_backend() {
 setup_frontend() {
     echo "Setting up frontend..."
     cd frontend
-    
+
+    # Activate the pinned Yarn version from package.json's packageManager field
+    corepack enable
+
     # Install dependencies
     echo "Installing Node dependencies..."
-    npm install --silent
-    
+    yarn install --immutable
+
     echo "✓ Frontend setup complete"
     cd ..
     echo ""
@@ -140,7 +143,7 @@ main() {
     echo ""
     echo "5. Start the frontend (Terminal 2):"
     echo "   cd frontend"
-    echo "   npm run dev"
+    echo "   yarn dev"
     echo ""
     echo "6. Open http://localhost:5173 in your browser"
     echo ""

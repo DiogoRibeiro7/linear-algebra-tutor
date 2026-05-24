@@ -22,7 +22,7 @@ python -m app.main
 **Start Frontend:**
 ```bash
 cd frontend
-npm run dev
+yarn dev
 ```
 
 **Access:**
@@ -91,7 +91,7 @@ pytest
 
 # Frontend
 cd frontend
-npm test
+yarn test
 ```
 
 ### Check Logs
@@ -132,8 +132,8 @@ POST /api/v1/chat/conversations/:id/messages    # Send message
 
 ### Frontend won't start
 1. Check Node version: `node --version` (need 20+)
-2. Delete node_modules: `rm -rf node_modules package-lock.json`
-3. Reinstall: `npm install`
+2. Delete node_modules: `rm -rf node_modules yarn.lock`
+3. Reinstall: `yarn install`
 
 ### "No embeddings found" error
 1. Add materials to `data/materials/`

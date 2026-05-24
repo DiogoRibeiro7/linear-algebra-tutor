@@ -2,17 +2,20 @@ FROM node:20-alpine AS builder
 
 WORKDIR /app
 
-# Copy package files
-COPY package.json package-lock.json* ./
+# Enable Corepack so the pinned Yarn version is used
+RUN corepack enable
 
-# Install dependencies
-RUN npm install
+# Copy manifests and Yarn config first for better layer caching
+COPY package.json yarn.lock .yarnrc.yml ./
+
+# Install dependencies (immutable enforces lockfile match)
+RUN yarn install --immutable
 
 # Copy source code
 COPY . .
 
 # Build the app
-RUN npm run build
+RUN yarn build
 
 # Production stage
 FROM nginx:alpine

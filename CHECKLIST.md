@@ -57,7 +57,7 @@ Track your progress from setup to deployment to presentation.
 
 ### Frontend Testing
 - [ ] Navigate to frontend directory
-- [ ] Start dev server: `npm run dev`
+- [ ] Start dev server: `yarn dev`
 - [ ] Verify server runs on port 5173
 - [ ] Check http://localhost:5173 loads
 - [ ] Verify no console errors
