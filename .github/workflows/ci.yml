@@ -1,0 +1,113 @@
+name: CI
+
+on:
+  push:
+    branches: [ main, develop ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  backend-tests:
+    name: Backend Tests
+    runs-on: ubuntu-latest
+    
+    steps:
+    - uses: actions/checkout@v3
+    
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.11'
+        
+    - name: Cache Python dependencies
+      uses: actions/cache@v3
+      with:
+        path: ~/.cache/pip
+        key: ${{ runner.os }}-pip-${{ hashFiles('backend/requirements.txt') }}
+        
+    - name: Install dependencies
+      run: |
+        cd backend
+        pip install -r requirements.txt
+        
+    - name: Lint with ruff
+      run: |
+        cd backend
+        pip install ruff
+        ruff check app/
+        
+    - name: Type check with mypy
+      run: |
+        cd backend
+        pip install mypy
+        mypy app/ --ignore-missing-imports
+      continue-on-error: true  # Don't fail build on type errors yet
+        
+    - name: Run tests
+      run: |
+        cd backend
+        pip install pytest pytest-asyncio pytest-cov
+        pytest
+      continue-on-error: true  # Until tests are written
+
+  frontend-tests:
+    name: Frontend Tests
+    runs-on: ubuntu-latest
+    
+    steps:
+    - uses: actions/checkout@v3
+    
+    - name: Set up Node.js
+      uses: actions/setup-node@v3
+      with:
+        node-version: '20'
+        
+    - name: Cache node modules
+      uses: actions/cache@v3
+      with:
+        path: frontend/node_modules
+        key: ${{ runner.os }}-node-${{ hashFiles('frontend/package-lock.json') }}
+        
+    - name: Install dependencies
+      run: |
+        cd frontend
+        npm ci
+        
+    - name: Lint
+      run: |
+        cd frontend
+        npm run lint
+      continue-on-error: true
+        
+    - name: Type check
+      run: |
+        cd frontend
+        npx tsc --noEmit
+        
+    - name: Build
+      run: |
+        cd frontend
+        npm run build
+        
+    - name: Run tests
+      run: |
+        cd frontend
+        npm test
+      continue-on-error: true  # Until tests are written
+
+  docker-build:
+    name: Docker Build Test
+    runs-on: ubuntu-latest
+    
+    steps:
+    - uses: actions/checkout@v3
+    
+    - name: Build backend image
+      run: |
+        cd backend
+        docker build -t linalg-backend .
+        
+    - name: Build frontend image
+      run: |
+        cd frontend
+        docker build -t linalg-frontend .

@@ -1,0 +1,31 @@
+cff-version: 1.2.0
+message: "If you use this software, please cite it as below."
+authors:
+  - family-names: "Ribeiro"
+    given-names: "Diogo"
+    orcid: "https://orcid.org/0009-0001-2022-7072"
+    email: "dfr@esmad.ipp.pt"
+    affiliation: "ESMAD - Escola Superior de Média Arte e Design, Instituto Politécnico do Porto"
+title: "Linear Algebra AI Tutor"
+version: 0.1.0
+date-released: 2025-01-01
+url: "https://github.com/diogoribeiro7/linear-algebra-tutor"
+repository-code: "https://github.com/diogoribeiro7/linear-algebra-tutor"
+keywords:
+  - artificial-intelligence
+  - education
+  - linear-algebra
+  - tutoring-system
+  - rag
+  - llm
+  - claude
+  - fastapi
+  - react
+license: MIT
+abstract: >
+  An intelligent tutoring system for Linear Algebra that leverages
+  Claude AI and Retrieval-Augmented Generation (RAG) to provide
+  personalized, Socratic-method learning experiences. Built with
+  FastAPI and React, featuring LaTeX rendering, conversation
+  management, and progress tracking. Designed for university
+  students in the TSIW program at ESMAD.
