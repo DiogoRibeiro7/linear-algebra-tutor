@@ -1,102 +1,103 @@
 """Database models."""
 from datetime import datetime
-from typing import Optional
-from sqlalchemy import Column, Integer, String, DateTime, ForeignKey, Boolean, Text, Float, JSON
-from sqlalchemy.orm import declarative_base, relationship
+from typing import Any, List, Optional
 
-Base = declarative_base()
+from sqlalchemy import ForeignKey, JSON, Text
+from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column, relationship
+
+
+class Base(DeclarativeBase):
+    pass
 
 
 class User(Base):
     """User model for students."""
     __tablename__ = "users"
-    
-    id = Column(Integer, primary_key=True, index=True)
-    email = Column(String, unique=True, index=True, nullable=False)
-    username = Column(String, unique=True, index=True, nullable=False)
-    hashed_password = Column(String, nullable=False)
-    full_name = Column(String)
-    is_active = Column(Boolean, default=True)
-    created_at = Column(DateTime, default=datetime.utcnow)
-    
-    # Relationships
-    conversations = relationship("Conversation", back_populates="user")
-    progress = relationship("StudentProgress", back_populates="user")
+
+    id: Mapped[int] = mapped_column(primary_key=True, index=True)
+    email: Mapped[str] = mapped_column(unique=True, index=True)
+    username: Mapped[str] = mapped_column(unique=True, index=True)
+    hashed_password: Mapped[str]
+    full_name: Mapped[Optional[str]]
+    is_active: Mapped[bool] = mapped_column(default=True)
+    created_at: Mapped[datetime] = mapped_column(default=datetime.utcnow)
+
+    conversations: Mapped[List["Conversation"]] = relationship(back_populates="user")
+    progress: Mapped[List["StudentProgress"]] = relationship(back_populates="user")
 
 
 class Conversation(Base):
     """Conversation session between student and AI tutor."""
     __tablename__ = "conversations"
-    
-    id = Column(Integer, primary_key=True, index=True)
-    user_id = Column(Integer, ForeignKey("users.id"))
-    title = Column(String)
-    created_at = Column(DateTime, default=datetime.utcnow)
-    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
-    
-    # Relationships
-    user = relationship("User", back_populates="conversations")
-    messages = relationship("Message", back_populates="conversation")
+
+    id: Mapped[int] = mapped_column(primary_key=True, index=True)
+    user_id: Mapped[Optional[int]] = mapped_column(ForeignKey("users.id"))
+    title: Mapped[Optional[str]]
+    created_at: Mapped[datetime] = mapped_column(default=datetime.utcnow)
+    updated_at: Mapped[datetime] = mapped_column(
+        default=datetime.utcnow, onupdate=datetime.utcnow
+    )
+
+    user: Mapped[Optional["User"]] = relationship(back_populates="conversations")
+    messages: Mapped[List["Message"]] = relationship(back_populates="conversation")
 
 
 class Message(Base):
     """Individual message in a conversation."""
     __tablename__ = "messages"
-    
-    id = Column(Integer, primary_key=True, index=True)
-    conversation_id = Column(Integer, ForeignKey("conversations.id"))
-    role = Column(String)  # "user" or "assistant"
-    content = Column(Text)
-    extra_metadata = Column(JSON, nullable=True)  # For storing additional context
-    created_at = Column(DateTime, default=datetime.utcnow)
-    
-    # Relationships
-    conversation = relationship("Conversation", back_populates="messages")
+
+    id: Mapped[int] = mapped_column(primary_key=True, index=True)
+    conversation_id: Mapped[Optional[int]] = mapped_column(ForeignKey("conversations.id"))
+    role: Mapped[Optional[str]]  # "user" or "assistant"
+    content: Mapped[Optional[str]] = mapped_column(Text)
+    extra_metadata: Mapped[Optional[Any]] = mapped_column(JSON)
+    created_at: Mapped[datetime] = mapped_column(default=datetime.utcnow)
+
+    conversation: Mapped[Optional["Conversation"]] = relationship(back_populates="messages")
 
 
 class Problem(Base):
     """Problem from the problem bank."""
     __tablename__ = "problems"
-    
-    id = Column(Integer, primary_key=True, index=True)
-    title = Column(String, nullable=False)
-    description = Column(Text, nullable=False)
-    topic = Column(String, index=True)  # vectors, matrices, eigenvalues, etc.
-    difficulty = Column(Integer)  # 1-5
-    solution = Column(Text)
-    hints = Column(JSON)  # List of hints
-    created_at = Column(DateTime, default=datetime.utcnow)
-    
-    # Relationships
-    attempts = relationship("ProblemAttempt", back_populates="problem")
+
+    id: Mapped[int] = mapped_column(primary_key=True, index=True)
+    title: Mapped[str]
+    description: Mapped[str] = mapped_column(Text)
+    topic: Mapped[Optional[str]] = mapped_column(index=True)
+    difficulty: Mapped[Optional[int]]  # 1-5
+    solution: Mapped[Optional[str]] = mapped_column(Text)
+    hints: Mapped[Optional[Any]] = mapped_column(JSON)
+    created_at: Mapped[datetime] = mapped_column(default=datetime.utcnow)
+
+    attempts: Mapped[List["ProblemAttempt"]] = relationship(back_populates="problem")
 
 
 class ProblemAttempt(Base):
     """Track student attempts at problems."""
     __tablename__ = "problem_attempts"
-    
-    id = Column(Integer, primary_key=True, index=True)
-    user_id = Column(Integer, ForeignKey("users.id"))
-    problem_id = Column(Integer, ForeignKey("problems.id"))
-    is_correct = Column(Boolean, default=False)
-    attempt_data = Column(JSON)  # Store student's work
-    created_at = Column(DateTime, default=datetime.utcnow)
-    
-    # Relationships
-    problem = relationship("Problem", back_populates="attempts")
+
+    id: Mapped[int] = mapped_column(primary_key=True, index=True)
+    user_id: Mapped[Optional[int]] = mapped_column(ForeignKey("users.id"))
+    problem_id: Mapped[Optional[int]] = mapped_column(ForeignKey("problems.id"))
+    is_correct: Mapped[bool] = mapped_column(default=False)
+    attempt_data: Mapped[Optional[Any]] = mapped_column(JSON)
+    created_at: Mapped[datetime] = mapped_column(default=datetime.utcnow)
+
+    problem: Mapped[Optional["Problem"]] = relationship(back_populates="attempts")
 
 
 class StudentProgress(Base):
     """Track student progress across topics."""
     __tablename__ = "student_progress"
-    
-    id = Column(Integer, primary_key=True, index=True)
-    user_id = Column(Integer, ForeignKey("users.id"))
-    topic = Column(String, index=True)
-    mastery_score = Column(Float, default=0.0)  # 0-1
-    problems_completed = Column(Integer, default=0)
-    last_practice = Column(DateTime)
-    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
-    
-    # Relationships
-    user = relationship("User", back_populates="progress")
+
+    id: Mapped[int] = mapped_column(primary_key=True, index=True)
+    user_id: Mapped[Optional[int]] = mapped_column(ForeignKey("users.id"))
+    topic: Mapped[Optional[str]] = mapped_column(index=True)
+    mastery_score: Mapped[float] = mapped_column(default=0.0)
+    problems_completed: Mapped[int] = mapped_column(default=0)
+    last_practice: Mapped[Optional[datetime]]
+    updated_at: Mapped[datetime] = mapped_column(
+        default=datetime.utcnow, onupdate=datetime.utcnow
+    )
+
+    user: Mapped[Optional["User"]] = relationship(back_populates="progress")

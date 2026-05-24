@@ -4,6 +4,7 @@ from fastapi.security import OAuth2PasswordRequestForm
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
 from pydantic import BaseModel, EmailStr
+from typing import Optional
 from datetime import timedelta
 
 from app.db.session import get_db
@@ -33,7 +34,7 @@ class UserResponse(BaseModel):
     id: int
     username: str
     email: str
-    full_name: str
+    full_name: Optional[str] = None
     is_active: bool
 
 

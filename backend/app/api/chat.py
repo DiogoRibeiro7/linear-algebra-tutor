@@ -34,7 +34,7 @@ class ConversationCreate(BaseModel):
 class ConversationResponse(BaseModel):
     """Conversation response schema."""
     id: int
-    title: str
+    title: Optional[str] = None
     created_at: str
     message_count: int
 
@@ -129,7 +129,7 @@ async def send_message(
     messages = history_result.scalars().all()
     
     conversation_history = [
-        {"role": msg.role, "content": msg.content}
+        {"role": msg.role or "", "content": msg.content or ""}
         for msg in messages[:-1]  # Exclude the message we just added
     ]
     

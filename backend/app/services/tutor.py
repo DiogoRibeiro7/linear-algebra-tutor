@@ -1,5 +1,5 @@
 """Main tutoring service combining LLM and RAG."""
-from typing import List, Dict, Optional
+from typing import Any, Dict, List, Optional
 from app.core.llm import claude_service
 from app.core.rag import rag_system
 from app.config import get_settings
@@ -17,9 +17,9 @@ class TutorService:
     async def answer_question(
         self,
         question: str,
-        conversation_history: List[Dict[str, str]] = None,
+        conversation_history: Optional[List[Dict[str, str]]] = None,
         use_rag: bool = True
-    ) -> Dict[str, any]:
+    ) -> Dict[str, Any]:
         """
         Answer a student's question.
         
@@ -80,7 +80,7 @@ class TutorService:
         self,
         problem: str,
         solution: str
-    ) -> Dict[str, any]:
+    ) -> Dict[str, Any]:
         """
         Evaluate a student's solution.
         
@@ -126,7 +126,7 @@ class TutorService:
         self,
         student_progress: Dict[str, float],
         weak_topics: List[str]
-    ) -> Dict[str, any]:
+    ) -> Dict[str, Any]:
         """
         Get personalized problem recommendations based on student progress.
         

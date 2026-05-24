@@ -1,6 +1,6 @@
 """Claude LLM integration service."""
 import anthropic
-from typing import List, Dict, Optional
+from typing import Any, Dict, List, Optional
 from app.config import get_settings
 from app.core.prompts import TUTOR_SYSTEM_PROMPT
 
@@ -17,7 +17,7 @@ class ClaudeService:
     async def generate_response(
         self,
         user_message: str,
-        conversation_history: List[Dict[str, str]] = None,
+        conversation_history: Optional[List[Dict[str, str]]] = None,
         context: Optional[str] = None,
         system_prompt: Optional[str] = None
     ) -> str:
@@ -96,7 +96,7 @@ Student question: {user_message}"""
         
         return response.content[0].text
     
-    async def check_solution(self, problem: str, solution: str) -> Dict[str, any]:
+    async def check_solution(self, problem: str, solution: str) -> Dict[str, Any]:
         """Check a student's solution."""
         from app.core.prompts import SOLUTION_CHECKER_PROMPT
         

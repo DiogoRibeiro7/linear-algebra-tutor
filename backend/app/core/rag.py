@@ -1,5 +1,5 @@
 """RAG (Retrieval-Augmented Generation) system for course materials."""
-from typing import List, Dict, Optional
+from typing import Any, Dict, List, Optional
 from sentence_transformers import SentenceTransformer
 import numpy as np
 from pathlib import Path
@@ -100,7 +100,7 @@ class RAGSystem:
         query: str,
         top_k: int = 3,
         filter_type: Optional[str] = None
-    ) -> List[Dict[str, any]]:
+    ) -> List[Dict[str, Any]]:
         """
         Retrieve most relevant documents for a query.
         

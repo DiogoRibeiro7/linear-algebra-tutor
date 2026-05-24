@@ -57,4 +57,6 @@ class Settings(BaseSettings):
 @lru_cache()
 def get_settings() -> Settings:
     """Get cached settings instance."""
-    return Settings()
+    # SECRET_KEY and ANTHROPIC_API_KEY are loaded from the environment (.env)
+    # at runtime; mypy can't see that, so the call-arg check is suppressed.
+    return Settings()  # type: ignore[call-arg]
