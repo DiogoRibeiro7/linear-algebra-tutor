@@ -145,7 +145,7 @@ async def send_message(
         conversation_id=conversation_id,
         role="assistant",
         content=response["answer"],
-        metadata={"sources": response["sources"]}
+        extra_metadata={"sources": response["sources"]}
     )
     db.add(assistant_message)
     await db.commit()
@@ -191,7 +191,7 @@ async def get_messages(
             "id": msg.id,
             "role": msg.role,
             "content": msg.content,
-            "metadata": msg.metadata,
+            "metadata": msg.extra_metadata,
             "created_at": msg.created_at.isoformat()
         }
         for msg in messages

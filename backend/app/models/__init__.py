@@ -47,7 +47,7 @@ class Message(Base):
     conversation_id = Column(Integer, ForeignKey("conversations.id"))
     role = Column(String)  # "user" or "assistant"
     content = Column(Text)
-    metadata = Column(JSON, nullable=True)  # For storing additional context
+    extra_metadata = Column(JSON, nullable=True)  # For storing additional context
     created_at = Column(DateTime, default=datetime.utcnow)
     
     # Relationships
