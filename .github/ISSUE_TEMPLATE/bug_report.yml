@@ -1,0 +1,53 @@
+name: Bug report
+description: Report a reproducible problem in the project
+labels: [bug]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for reporting this. Please provide enough detail for us to reproduce and fix quickly.
+  - type: input
+    id: summary
+    attributes:
+      label: Summary
+      description: One-line description of the issue
+      placeholder: Chat page crashes when sending first message
+    validations:
+      required: true
+  - type: textarea
+    id: steps
+    attributes:
+      label: Steps to reproduce
+      description: Include exact steps, input, and environment details
+      placeholder: |
+        1. Start backend with `python -m app.main`
+        2. Open dashboard and send message "what is a vector"
+        3. Observe 500 error
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected behavior
+    validations:
+      required: true
+  - type: textarea
+    id: actual
+    attributes:
+      label: Actual behavior
+    validations:
+      required: true
+  - type: textarea
+    id: logs
+    attributes:
+      label: Relevant logs / screenshots
+      description: Paste stack traces or screenshots
+      render: shell
+  - type: input
+    id: env
+    attributes:
+      label: Environment
+      description: OS, Python version, Node version, and browser (if frontend)
+      placeholder: Windows 11, Python 3.11.8, Node 20.11, Chrome 125
+    validations:
+      required: true
