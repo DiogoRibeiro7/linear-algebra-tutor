@@ -42,13 +42,15 @@ Thank you for your interest in contributing! This project aims to provide high-q
 
 4. **Test thoroughly**
    ```bash
-   # Backend tests
+   # Backend tests (pytest + coverage gate)
    cd backend
    pytest
-   
-   # Frontend tests
+
+   # Frontend tests (Vitest + React Testing Library)
    cd frontend
-   yarn test
+   yarn test            # one-shot run
+   yarn test:watch      # watch mode while developing
+   yarn test:coverage   # with v8 coverage report
    ```
 
 5. **Submit a pull request**

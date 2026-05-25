@@ -20,6 +20,9 @@
     "noUnusedParameters": true,
     "noFallthroughCasesInSwitch": true,
 
+    /* Vitest globals (describe/it/expect/vi) — only active in test files */
+    "types": ["vitest/globals"],
+
     /* Path mapping */
     "baseUrl": ".",
     "paths": {

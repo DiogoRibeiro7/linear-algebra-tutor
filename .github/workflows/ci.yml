@@ -82,13 +82,8 @@ jobs:
         run: yarn build
         working-directory: frontend
 
-      - name: Tests (if configured)
-        run: |
-          if yarn run --silent 2>&1 | grep -q "^  - test$"; then
-            yarn test
-          else
-            echo "No frontend test script configured yet. Skipping tests."
-          fi
+      - name: Tests
+        run: yarn test
         working-directory: frontend
 
   docker-build:
