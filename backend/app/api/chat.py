@@ -1,4 +1,5 @@
 """Chat API endpoints."""
+
 from fastapi import APIRouter, Depends, HTTPException, Request
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import func, select
@@ -18,11 +19,13 @@ router = APIRouter()
 
 class ChatMessage(BaseModel):
     """Chat message schema."""
+
     content: str
 
 
 class ChatResponse(BaseModel):
     """Chat response schema."""
+
     answer: str
     sources: List[dict] = []
     conversation_id: int
@@ -31,11 +34,13 @@ class ChatResponse(BaseModel):
 
 class ConversationCreate(BaseModel):
     """Schema for creating a new conversation."""
+
     title: Optional[str] = "New Conversation"
 
 
 class ConversationResponse(BaseModel):
     """Conversation response schema."""
+
     id: int
     title: Optional[str] = None
     created_at: str
@@ -44,6 +49,7 @@ class ConversationResponse(BaseModel):
 
 class MessageResponse(BaseModel):
     """Single message in a conversation, as returned by GET /messages."""
+
     id: int
     role: Optional[str] = None
     content: Optional[str] = None
@@ -57,30 +63,27 @@ class MessageResponse(BaseModel):
 async def create_conversation(
     data: ConversationCreate,
     current_user: User = Depends(get_current_active_user),
-    db: AsyncSession = Depends(get_db)
+    db: AsyncSession = Depends(get_db),
 ):
     """Create a new conversation."""
-    conversation = Conversation(
-        user_id=current_user.id,
-        title=data.title
-    )
-    
+    conversation = Conversation(user_id=current_user.id, title=data.title)
+
     db.add(conversation)
     await db.commit()
     await db.refresh(conversation)
-    
+
     return ConversationResponse(
         id=conversation.id,
         title=conversation.title,
         created_at=conversation.created_at.isoformat(),
-        message_count=0
+        message_count=0,
     )
 
 
 @router.get("/conversations", response_model=List[ConversationResponse])
 async def get_conversations(
     current_user: User = Depends(get_current_active_user),
-    db: AsyncSession = Depends(get_db)
+    db: AsyncSession = Depends(get_db),
 ):
     """Get all conversations for the current user."""
     msg_count = func.count(Message.id)
@@ -110,14 +113,13 @@ async def send_message(
     conversation_id: int,
     message: ChatMessage,
     current_user: User = Depends(get_current_active_user),
-    db: AsyncSession = Depends(get_db)
+    db: AsyncSession = Depends(get_db),
 ):
     """Send a message in a conversation."""
     # Verify conversation belongs to user
     result = await db.execute(
         select(Conversation).where(
-            Conversation.id == conversation_id,
-            Conversation.user_id == current_user.id
+            Conversation.id == conversation_id, Conversation.user_id == current_user.id
         )
     )
     conversation = result.scalar_one_or_none()
@@ -138,9 +140,7 @@ async def send_message(
     ]
 
     user_message = Message(
-        conversation_id=conversation_id,
-        role="user",
-        content=message.content
+        conversation_id=conversation_id, role="user", content=message.content
     )
     db.add(user_message)
     await db.commit()
@@ -149,25 +149,25 @@ async def send_message(
     response = await tutor_service.answer_question(
         question=message.content,
         conversation_history=conversation_history,
-        use_rag=True
+        use_rag=True,
     )
-    
+
     # Save assistant response
     assistant_message = Message(
         conversation_id=conversation_id,
         role="assistant",
         content=response["answer"],
-        extra_metadata={"sources": response["sources"]}
+        extra_metadata={"sources": response["sources"]},
     )
     db.add(assistant_message)
     await db.commit()
     await db.refresh(assistant_message)
-    
+
     return ChatResponse(
         answer=response["answer"],
         sources=response["sources"],
         conversation_id=conversation_id,
-        message_id=assistant_message.id
+        message_id=assistant_message.id,
     )
 
 
@@ -178,14 +178,13 @@ async def send_message(
 async def get_messages(
     conversation_id: int,
     current_user: User = Depends(get_current_active_user),
-    db: AsyncSession = Depends(get_db)
+    db: AsyncSession = Depends(get_db),
 ):
     """Get all messages in a conversation."""
     # Verify conversation belongs to user
     result = await db.execute(
         select(Conversation).where(
-            Conversation.id == conversation_id,
-            Conversation.user_id == current_user.id
+            Conversation.id == conversation_id, Conversation.user_id == current_user.id
         )
     )
     conversation = result.scalar_one_or_none()

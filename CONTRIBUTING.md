@@ -68,6 +68,26 @@ Quick start:
 python scripts/generate_embeddings.py
 ```
 
+### Pre-commit hooks
+
+This repo ships a `.pre-commit-config.yaml` that runs the same gates CI runs
+(ruff, black, frontend ESLint) plus a few hygiene checks. Install once:
+
+```bash
+pip install pre-commit
+pre-commit install
+```
+
+From then on, the hooks run automatically on `git commit` against the files
+you've staged. To run them across the whole repo (useful after pulling):
+
+```bash
+pre-commit run --all-files
+```
+
+If a hook needs a tool you don't have locally (e.g. Node for the frontend
+lint hook), skip it for a single commit with `SKIP=frontend-lint git commit`.
+
 ## Code Style
 
 ### Python (Backend)

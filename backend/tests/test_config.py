@@ -1,4 +1,5 @@
 """Tests for the friendlier ConfigError surfaced on bad env state."""
+
 import importlib
 
 import pytest
@@ -7,6 +8,7 @@ import pytest
 def _reload_config():
     """Drop the lru_cache+module state so each test sees fresh env reads."""
     import app.config as config_module
+
     importlib.reload(config_module)
     return config_module
 
@@ -51,9 +53,7 @@ def test_localhost_cors_blocked_when_debug_false(monkeypatch):
 def test_localhost_cors_allowed_in_debug_mode(monkeypatch):
     """Dev mode keeps the localhost-friendly default usable."""
     monkeypatch.setenv("DEBUG", "true")
-    monkeypatch.setenv(
-        "CORS_ORIGINS", '["http://localhost:5173"]'
-    )
+    monkeypatch.setenv("CORS_ORIGINS", '["http://localhost:5173"]')
 
     config_module = _reload_config()
 

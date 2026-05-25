@@ -1,0 +1,43 @@
+# Mirrors the gates CI enforces, but only on changed files so it stays fast.
+# Install once with: pip install pre-commit && pre-commit install
+# Run on all files with: pre-commit run --all-files
+
+repos:
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v5.0.0
+    hooks:
+      - id: trailing-whitespace
+      - id: end-of-file-fixer
+      - id: check-yaml
+      - id: check-toml
+      - id: check-merge-conflict
+      - id: check-added-large-files
+        args: ['--maxkb=500']
+
+  # Ruff: same version pinned in backend/requirements.txt so local fixes
+  # match what CI would flag.
+  - repo: https://github.com/astral-sh/ruff-pre-commit
+    rev: v0.1.14
+    hooks:
+      - id: ruff
+        args: [--fix]
+        files: ^backend/.*\.py$
+
+  # Black: matches the version in backend/requirements.txt.
+  - repo: https://github.com/psf/black
+    rev: 24.1.1
+    hooks:
+      - id: black
+        files: ^backend/.*\.py$
+
+  # Frontend lint runs through yarn so it picks up the project's pinned
+  # ESLint version. Requires Node + Corepack; skipped on systems without
+  # them via `SKIP=frontend-lint git commit ...`.
+  - repo: local
+    hooks:
+      - id: frontend-lint
+        name: ESLint (frontend)
+        language: system
+        entry: bash -c 'cd frontend && yarn lint'
+        files: ^frontend/src/.*\.(ts|tsx)$
+        pass_filenames: false

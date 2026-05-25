@@ -4,6 +4,7 @@ This module sets required env vars and stubs heavy external clients
 (SentenceTransformer, anthropic.Anthropic) *before* any `app.*` import,
 because both are instantiated at module load time as singletons.
 """
+
 import os
 import sys
 from pathlib import Path
@@ -25,12 +26,8 @@ os.environ.setdefault("DISABLE_RATE_LIMIT", "true")
 import sentence_transformers  # noqa: E402
 
 _fake_st_instance = MagicMock()
-_fake_st_instance.encode = MagicMock(
-    return_value=np.zeros((1, 384), dtype="float32")
-)
-sentence_transformers.SentenceTransformer = MagicMock(
-    return_value=_fake_st_instance
-)
+_fake_st_instance.encode = MagicMock(return_value=np.zeros((1, 384), dtype="float32"))
+sentence_transformers.SentenceTransformer = MagicMock(return_value=_fake_st_instance)
 
 import anthropic  # noqa: E402
 
@@ -39,7 +36,6 @@ anthropic.AsyncAnthropic = MagicMock()
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
-import pytest  # noqa: E402
 import pytest_asyncio  # noqa: E402
 from httpx import ASGITransport, AsyncClient  # noqa: E402
 from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine  # noqa: E402
