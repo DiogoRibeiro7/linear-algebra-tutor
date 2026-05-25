@@ -44,26 +44,31 @@ class RAGSystem:
                     "type": "course_material"
                 })
         
-        # Load Python notebooks/code examples
+        # Load Python notebooks/code examples (chunked so long files don't
+        # drown out shorter, more relevant matches)
         for file_path in materials_dir.rglob("*.py"):
             with open(file_path, 'r', encoding='utf-8') as f:
                 content = f.read()
-                
-            self.documents.append(content)
-            self.metadata.append({
-                "source": str(file_path.relative_to(materials_dir)),
-                "type": "code_example"
-            })
+
+            for chunk in self._split_into_chunks(content):
+                self.documents.append(chunk)
+                self.metadata.append({
+                    "source": str(file_path.relative_to(materials_dir)),
+                    "type": "code_example"
+                })
         
         print(f"Loaded {len(self.documents)} document chunks")
         
     def generate_embeddings(self):
         """Generate embeddings for all documents."""
         print("Generating embeddings...")
+        # normalize_embeddings=True makes dot product equal cosine similarity,
+        # which is what retrieve() actually wants.
         self.embeddings = self.embedding_model.encode(
             self.documents,
             show_progress_bar=True,
-            convert_to_numpy=True
+            convert_to_numpy=True,
+            normalize_embeddings=True,
         )
         print(f"Generated embeddings with shape {self.embeddings.shape}")
         
@@ -112,8 +117,11 @@ class RAGSystem:
         Returns:
             List of relevant documents with metadata and scores
         """
-        # Generate query embedding
-        query_embedding = self.embedding_model.encode([query])[0]
+        # Generate query embedding (normalized to match stored embeddings, so
+        # the dot product below is cosine similarity)
+        query_embedding = self.embedding_model.encode(
+            [query], normalize_embeddings=True
+        )[0]
         
         # Calculate similarity scores
         similarities = np.dot(self.embeddings, query_embedding)

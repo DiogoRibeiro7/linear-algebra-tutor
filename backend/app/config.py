@@ -30,12 +30,7 @@ class Settings(BaseSettings):
     CLAUDE_MODEL: str = "claude-sonnet-4-20250514"
     MAX_TOKENS: int = 4096
     TEMPERATURE: float = 0.7
-    
-    # Pinecone
-    PINECONE_API_KEY: str = ""
-    PINECONE_ENVIRONMENT: str = ""
-    PINECONE_INDEX_NAME: str = "linalg-materials"
-    
+
     # Embedding Model
     EMBEDDING_MODEL: str = "sentence-transformers/all-MiniLM-L6-v2"
     

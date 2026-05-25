@@ -1,10 +1,16 @@
 """Main tutoring service combining LLM and RAG."""
+import re
 from typing import Any, Dict, List, Optional
 from app.core.llm import claude_service
 from app.core.rag import rag_system
 from app.config import get_settings
 
 settings = get_settings()
+
+_FENCE_RE = re.compile(
+    r"\A\s*```(?:python)?\s*\n(?P<body>.*?)\n```\s*\Z",
+    re.DOTALL,
+)
 
 
 class TutorService:
@@ -112,9 +118,13 @@ class TutorService:
             concept,
             specific_request
         )
-        
-        # Clean up code (remove markdown fences if present)
-        code = code.replace("```python", "").replace("```", "").strip()
+
+        # Strip an outer ```python ... ``` fence only; preserve any inner
+        # fences that might legitimately appear in comments or strings.
+        m = _FENCE_RE.match(code)
+        if m:
+            code = m.group("body")
+        code = code.strip()
         
         return {
             "code": code,

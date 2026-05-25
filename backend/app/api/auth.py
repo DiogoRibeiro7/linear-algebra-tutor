@@ -3,7 +3,7 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from fastapi.security import OAuth2PasswordRequestForm
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
-from pydantic import BaseModel, EmailStr
+from pydantic import BaseModel, EmailStr, Field
 from typing import Optional
 from datetime import timedelta
 
@@ -23,9 +23,10 @@ router = APIRouter()
 
 class UserCreate(BaseModel):
     """Schema for user registration."""
-    username: str
+    username: str = Field(min_length=3, max_length=32)
     email: EmailStr
-    password: str
+    # bcrypt truncates beyond 72 bytes; reject early instead of silently truncating
+    password: str = Field(min_length=8, max_length=72)
     full_name: str
 
 
@@ -110,10 +111,12 @@ async def login(
             detail="Incorrect username or password",
             headers={"WWW-Authenticate": "Bearer"},
         )
-    
+
+    # Reject deactivated accounts after we've verified credentials so we don't
+    # leak which usernames exist via differing status codes.
     if not user.is_active:
         raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
+            status_code=status.HTTP_403_FORBIDDEN,
             detail="Inactive user"
         )
     

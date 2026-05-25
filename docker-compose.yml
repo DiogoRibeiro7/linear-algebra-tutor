@@ -1,5 +1,3 @@
-version: '3.8'
-
 services:
   # PostgreSQL database
   db:
@@ -42,11 +40,10 @@ services:
     environment:
       - DATABASE_URL=postgresql+asyncpg://linalg:linalg_password@db:5432/linalg_tutor
       - REDIS_URL=redis://redis:6379/0
-      - SECRET_KEY=${SECRET_KEY:-your-secret-key-change-in-production}
-      - ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY}
-      - DEBUG=true
+      - SECRET_KEY=${SECRET_KEY:?SECRET_KEY must be set in the environment}
+      - ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY:?ANTHROPIC_API_KEY must be set in the environment}
+      - DEBUG=false
     volumes:
-      - ./backend:/app
       - ./data:/app/data
     ports:
       - "8000:8000"
@@ -55,7 +52,6 @@ services:
         condition: service_healthy
       redis:
         condition: service_healthy
-    command: uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
 
   # Frontend
   frontend:

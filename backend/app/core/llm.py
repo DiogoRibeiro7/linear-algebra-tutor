@@ -11,7 +11,7 @@ class ClaudeService:
     """Service for interacting with Claude API."""
     
     def __init__(self):
-        self.client = anthropic.Anthropic(api_key=settings.ANTHROPIC_API_KEY)
+        self.client = anthropic.AsyncAnthropic(api_key=settings.ANTHROPIC_API_KEY)
         self.model = settings.CLAUDE_MODEL
         
     async def generate_response(
@@ -62,17 +62,17 @@ Student question: {user_message}"""
         
         try:
             # Call Claude API
-            response = self.client.messages.create(
+            response = await self.client.messages.create(
                 model=self.model,
                 max_tokens=settings.MAX_TOKENS,
                 temperature=settings.TEMPERATURE,
                 system=final_system_prompt,
                 messages=messages
             )
-            
+
             # Extract text from response
             return response.content[0].text
-            
+
         except Exception as e:
             print(f"Error calling Claude API: {e}")
             raise
@@ -86,7 +86,7 @@ Student question: {user_message}"""
             context=context
         )
         
-        response = self.client.messages.create(
+        response = await self.client.messages.create(
             model=self.model,
             max_tokens=500,
             temperature=0.7,
@@ -105,7 +105,7 @@ Student question: {user_message}"""
             solution=solution
         )
         
-        response = self.client.messages.create(
+        response = await self.client.messages.create(
             model=self.model,
             max_tokens=1000,
             temperature=0.3,  # Lower temperature for evaluation
@@ -130,7 +130,7 @@ Student question: {user_message}"""
             context=context
         )
         
-        response = self.client.messages.create(
+        response = await self.client.messages.create(
             model=self.model,
             max_tokens=1500,
             temperature=0.5,

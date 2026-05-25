@@ -15,6 +15,9 @@ os.environ.setdefault("SECRET_KEY", "test-secret-key-not-for-prod")
 os.environ.setdefault("ANTHROPIC_API_KEY", "test-anthropic-key")
 os.environ.setdefault("DATABASE_URL", "sqlite+aiosqlite:///:memory:")
 os.environ.setdefault("DEBUG", "false")
+# Disable per-IP rate limiting so the module-level Limiter singleton doesn't
+# leak counters across tests sharing the same simulated client IP.
+os.environ.setdefault("DISABLE_RATE_LIMIT", "true")
 
 import sentence_transformers  # noqa: E402
 
@@ -29,6 +32,7 @@ sentence_transformers.SentenceTransformer = MagicMock(
 import anthropic  # noqa: E402
 
 anthropic.Anthropic = MagicMock()
+anthropic.AsyncAnthropic = MagicMock()
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 

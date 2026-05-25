@@ -1,15 +1,18 @@
 """Chat API endpoints."""
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Request
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select
+from sqlalchemy import func, select
 from pydantic import BaseModel
 from typing import List, Optional
 
-from app.db.session import get_db
+from app.config import get_settings
+from app.core.limiter import limiter
 from app.core.security import get_current_active_user
+from app.db.session import get_db
 from app.models import User, Conversation, Message
 from app.services.tutor import tutor_service
 
+settings = get_settings()
 router = APIRouter()
 
 
@@ -69,30 +72,30 @@ async def get_conversations(
     db: AsyncSession = Depends(get_db)
 ):
     """Get all conversations for the current user."""
+    msg_count = func.count(Message.id)
     result = await db.execute(
-        select(Conversation)
+        select(Conversation, msg_count)
+        .outerjoin(Message, Message.conversation_id == Conversation.id)
         .where(Conversation.user_id == current_user.id)
+        .group_by(Conversation.id)
         .order_by(Conversation.updated_at.desc())
     )
-    conversations = result.scalars().all()
-    
-    response = []
-    for conv in conversations:
-        msg_count = await db.execute(
-            select(Message).where(Message.conversation_id == conv.id)
-        )
-        response.append(ConversationResponse(
+
+    return [
+        ConversationResponse(
             id=conv.id,
             title=conv.title,
             created_at=conv.created_at.isoformat(),
-            message_count=len(msg_count.scalars().all())
-        ))
-    
-    return response
+            message_count=count,
+        )
+        for conv, count in result.all()
+    ]
 
 
 @router.post("/conversations/{conversation_id}/messages", response_model=ChatResponse)
+@limiter.limit(f"{settings.RATE_LIMIT_PER_MINUTE}/minute")
 async def send_message(
+    request: Request,
     conversation_id: int,
     message: ChatMessage,
     current_user: User = Depends(get_current_active_user),
@@ -107,11 +110,22 @@ async def send_message(
         )
     )
     conversation = result.scalar_one_or_none()
-    
+
     if not conversation:
         raise HTTPException(status_code=404, detail="Conversation not found")
-    
-    # Save user message
+
+    # Snapshot the history *before* persisting the new user message so we don't
+    # have to filter it back out, then save the user message.
+    history_result = await db.execute(
+        select(Message)
+        .where(Message.conversation_id == conversation_id)
+        .order_by(Message.created_at.asc())
+    )
+    conversation_history = [
+        {"role": msg.role or "", "content": msg.content or ""}
+        for msg in history_result.scalars().all()
+    ]
+
     user_message = Message(
         conversation_id=conversation_id,
         role="user",
@@ -119,20 +133,7 @@ async def send_message(
     )
     db.add(user_message)
     await db.commit()
-    
-    # Get conversation history
-    history_result = await db.execute(
-        select(Message)
-        .where(Message.conversation_id == conversation_id)
-        .order_by(Message.created_at.asc())
-    )
-    messages = history_result.scalars().all()
-    
-    conversation_history = [
-        {"role": msg.role or "", "content": msg.content or ""}
-        for msg in messages[:-1]  # Exclude the message we just added
-    ]
-    
+
     # Generate response using tutor service
     response = await tutor_service.answer_question(
         question=message.content,

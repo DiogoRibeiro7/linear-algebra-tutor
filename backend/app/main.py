@@ -2,11 +2,14 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from contextlib import asynccontextmanager
+from slowapi import _rate_limit_exceeded_handler
+from slowapi.errors import RateLimitExceeded
 
 from app.config import get_settings
 from app.db.session import init_db, close_db
 from app.api import auth, chat
 from app.core.rag import rag_system
+from app.core.limiter import limiter
 from pathlib import Path
 
 settings = get_settings()
@@ -43,6 +46,13 @@ app = FastAPI(
     title=settings.APP_NAME,
     version=settings.APP_VERSION,
     lifespan=lifespan
+)
+
+# Wire rate limiting (slowapi's handler is typed narrower than Starlette wants)
+app.state.limiter = limiter
+app.add_exception_handler(
+    RateLimitExceeded,
+    _rate_limit_exceeded_handler,  # type: ignore[arg-type]
 )
 
 # Configure CORS
