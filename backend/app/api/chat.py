@@ -42,6 +42,17 @@ class ConversationResponse(BaseModel):
     message_count: int
 
 
+class MessageResponse(BaseModel):
+    """Single message in a conversation, as returned by GET /messages."""
+    id: int
+    role: Optional[str] = None
+    content: Optional[str] = None
+    # API uses "metadata" while the column is named extra_metadata to dodge
+    # SQLAlchemy's reserved attribute name; keep the wire shape unchanged.
+    metadata: Optional[dict] = None
+    created_at: str
+
+
 @router.post("/conversations", response_model=ConversationResponse)
 async def create_conversation(
     data: ConversationCreate,
@@ -160,7 +171,10 @@ async def send_message(
     )
 
 
-@router.get("/conversations/{conversation_id}/messages")
+@router.get(
+    "/conversations/{conversation_id}/messages",
+    response_model=List[MessageResponse],
+)
 async def get_messages(
     conversation_id: int,
     current_user: User = Depends(get_current_active_user),
@@ -175,25 +189,23 @@ async def get_messages(
         )
     )
     conversation = result.scalar_one_or_none()
-    
+
     if not conversation:
         raise HTTPException(status_code=404, detail="Conversation not found")
-    
-    # Get messages
+
     messages_result = await db.execute(
         select(Message)
         .where(Message.conversation_id == conversation_id)
         .order_by(Message.created_at.asc())
     )
-    messages = messages_result.scalars().all()
-    
+
     return [
-        {
-            "id": msg.id,
-            "role": msg.role,
-            "content": msg.content,
-            "metadata": msg.extra_metadata,
-            "created_at": msg.created_at.isoformat()
-        }
-        for msg in messages
+        MessageResponse(
+            id=msg.id,
+            role=msg.role,
+            content=msg.content,
+            metadata=msg.extra_metadata,
+            created_at=msg.created_at.isoformat(),
+        )
+        for msg in messages_result.scalars().all()
     ]

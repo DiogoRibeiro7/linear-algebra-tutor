@@ -1,5 +1,5 @@
 """Authentication API endpoints."""
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, Request, status
 from fastapi.security import OAuth2PasswordRequestForm
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
@@ -7,6 +7,7 @@ from pydantic import BaseModel, EmailStr, Field
 from typing import Optional
 from datetime import timedelta
 
+from app.core.limiter import limiter
 from app.db.session import get_db
 from app.core.security import (
     verify_password,
@@ -46,7 +47,9 @@ class Token(BaseModel):
 
 
 @router.post("/register", response_model=UserResponse)
+@limiter.limit("5/minute")
 async def register(
+    request: Request,
     user_data: UserCreate,
     db: AsyncSession = Depends(get_db)
 ):
@@ -94,7 +97,9 @@ async def register(
 
 
 @router.post("/login", response_model=Token)
+@limiter.limit("10/minute")
 async def login(
+    request: Request,
     form_data: OAuth2PasswordRequestForm = Depends(),
     db: AsyncSession = Depends(get_db)
 ):

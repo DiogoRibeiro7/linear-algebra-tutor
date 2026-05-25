@@ -15,6 +15,9 @@ os.environ.setdefault("SECRET_KEY", "test-secret-key-not-for-prod")
 os.environ.setdefault("ANTHROPIC_API_KEY", "test-anthropic-key")
 os.environ.setdefault("DATABASE_URL", "sqlite+aiosqlite:///:memory:")
 os.environ.setdefault("DEBUG", "false")
+# Empty CORS allowlist satisfies the "no localhost in prod" config check
+# without forcing DEBUG=true (which would turn on SQLAlchemy echo).
+os.environ.setdefault("CORS_ORIGINS", "[]")
 # Disable per-IP rate limiting so the module-level Limiter singleton doesn't
 # leak counters across tests sharing the same simulated client IP.
 os.environ.setdefault("DISABLE_RATE_LIMIT", "true")
