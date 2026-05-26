@@ -70,6 +70,40 @@ Quick start:
 python scripts/generate_embeddings.py
 ```
 
+### Database migrations
+
+Schema changes go through Alembic. The runtime app still calls
+`Base.metadata.create_all` on startup for dev convenience (SQLite),
+but **any prod deploy must run `alembic upgrade head` before serving
+traffic**.
+
+The Alembic env reads `DATABASE_URL` from the environment and
+translates the async driver to its sync counterpart for migrations
+(`+aiosqlite` -> sqlite, `+asyncpg` -> `+psycopg2`). You don't need a
+second DB URL.
+
+```bash
+cd backend
+
+# Inspect current head and history
+alembic current
+alembic history
+
+# Apply all pending migrations
+alembic upgrade head
+
+# Roll back one revision (be careful in prod)
+alembic downgrade -1
+
+# After editing app/models, generate a new revision
+alembic revision --autogenerate -m "describe the change"
+# REVIEW the generated file in backend/migrations/versions/ — autogenerate
+# misses things like server defaults, indexed expressions, enum renames.
+
+# Confirm there's no drift between the migration history and your models
+alembic check
+```
+
 ### Pre-commit hooks
 
 This repo ships a `.pre-commit-config.yaml` that runs the same gates CI runs

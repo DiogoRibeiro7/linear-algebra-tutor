@@ -36,6 +36,7 @@ httpx==0.26.0
 numpy==1.26.3
 sympy==1.12
 matplotlib==3.8.2
+tzdata==2026.2  # Windows has no system tzdb; alembic file_template needs UTC
 
 # Testing
 pytest==7.4.4
