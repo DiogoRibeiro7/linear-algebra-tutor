@@ -1,15 +1,16 @@
 /**
  * Main dashboard page with sidebar and chat
  */
-import { useEffect } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { chatAPI } from '@/services/api';
 import { useStore } from '@/store';
 import { ChatInterface } from '@/components/ChatInterface';
-import { Menu, Plus, MessageSquare, LogOut, User } from 'lucide-react';
+import { Menu, Plus, MessageSquare, LogOut, Search, User } from 'lucide-react';
 
 export function Dashboard() {
   const queryClient = useQueryClient();
+  const [searchQuery, setSearchQuery] = useState('');
   const {
     user,
     currentConversation,
@@ -22,6 +23,16 @@ export function Dashboard() {
     setToken,
     setUser,
   } = useStore();
+
+  // Case-insensitive substring match on title; empty query passes everything
+  // through unchanged so untitled conversations stay visible.
+  const filteredConversations = useMemo(() => {
+    const q = searchQuery.trim().toLowerCase();
+    if (!q) return conversations;
+    return conversations.filter((c) =>
+      (c.title || '').toLowerCase().includes(q),
+    );
+  }, [conversations, searchQuery]);
 
   // Fetch conversations
   const { data: fetchedConversations = [] } = useQuery({
@@ -76,9 +87,35 @@ export function Dashboard() {
           </button>
         </div>
 
+        {/* Search filter */}
+        <div className="px-4 pb-2">
+          <label htmlFor="conversation-search" className="sr-only">
+            Search conversations
+          </label>
+          <div className="relative">
+            <Search
+              size={14}
+              className="absolute left-2.5 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none"
+            />
+            <input
+              id="conversation-search"
+              type="search"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              placeholder="Search conversations"
+              className="w-full pl-8 pr-2 py-1.5 text-sm border border-gray-200 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+            />
+          </div>
+        </div>
+
         {/* Conversations list */}
         <div className="flex-1 overflow-y-auto px-2">
-          {conversations.map((conv) => (
+          {filteredConversations.length === 0 && searchQuery && (
+            <p className="px-3 py-2 text-sm text-gray-500">
+              No conversations match &ldquo;{searchQuery}&rdquo;.
+            </p>
+          )}
+          {filteredConversations.map((conv) => (
             <button
               key={conv.id}
               onClick={() => setCurrentConversation(conv)}
