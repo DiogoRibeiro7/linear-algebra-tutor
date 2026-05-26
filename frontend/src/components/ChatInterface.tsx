@@ -3,7 +3,7 @@
  */
 import { useState, useEffect, useRef } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { chatAPI, Message } from '@/services/api';
+import { chatAPI } from '@/services/api';
 import { MessageBubble } from './MessageBubble';
 import { Send, Loader2 } from 'lucide-react';
 import { useStore } from '@/store';

@@ -19,15 +19,22 @@ export function MathRenderer({ content, className = '' }: MathRendererProps) {
         remarkPlugins={[remarkMath, remarkGfm]}
         rehypePlugins={[rehypeKatex]}
         components={{
-          // Customize code blocks
-          code({ node, inline, className, children, ...props }) {
-            const match = /language-(\w+)/.exec(className || '');
-            return !inline ? (
-              <pre className="bg-gray-100 rounded-lg p-4 overflow-x-auto">
-                <code className={className} {...props}>
-                  {children}
-                </code>
+          // react-markdown v9 dropped the `inline` prop; in v9 fenced code
+          // is wrapped in <pre> by the renderer, so we style <pre> for the
+          // block case and <code> only for inline.
+          pre({ children, ...props }) {
+            return (
+              <pre className="bg-gray-100 rounded-lg p-4 overflow-x-auto" {...props}>
+                {children}
               </pre>
+            );
+          },
+          code({ className, children, ...props }) {
+            const isBlock = className?.startsWith('language-') ?? false;
+            return isBlock ? (
+              <code className={className} {...props}>
+                {children}
+              </code>
             ) : (
               <code className="bg-gray-100 px-1 py-0.5 rounded text-sm" {...props}>
                 {children}

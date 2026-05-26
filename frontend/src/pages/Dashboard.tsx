@@ -1,7 +1,7 @@
 /**
  * Main dashboard page with sidebar and chat
  */
-import { useState, useEffect } from 'react';
+import { useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { chatAPI } from '@/services/api';
 import { useStore } from '@/store';
