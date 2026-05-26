@@ -71,6 +71,7 @@ const SAMPLE_CONVERSATIONS: Conversation[] = [
     id: 1,
     title: 'Vectors intro',
     pinned: false,
+    hint_level: 'medium',
     created_at: '2026-05-25T10:00:00Z',
     message_count: 3,
   },
@@ -78,6 +79,7 @@ const SAMPLE_CONVERSATIONS: Conversation[] = [
     id: 2,
     title: 'Matrix multiplication',
     pinned: false,
+    hint_level: 'medium',
     created_at: '2026-05-25T11:00:00Z',
     message_count: 7,
   },
@@ -85,6 +87,7 @@ const SAMPLE_CONVERSATIONS: Conversation[] = [
     id: 3,
     title: 'Eigenvalues',
     pinned: false,
+    hint_level: 'medium',
     created_at: '2026-05-25T12:00:00Z',
     message_count: 1,
   },
@@ -167,5 +170,38 @@ describe('Dashboard', () => {
     expect(
       screen.getByRole('button', { name: 'Pin conversation' }),
     ).toHaveAttribute('aria-pressed', 'false');
+  });
+
+  it('hides the hint-level select until a conversation is selected', () => {
+    storeState.conversations = SAMPLE_CONVERSATIONS;
+    storeState.currentConversation = null;
+    renderWithProviders(<Dashboard />);
+    expect(screen.queryByLabelText(/hint level/i)).not.toBeInTheDocument();
+  });
+
+  it('shows the active conversation hint level and PATCHes on change', async () => {
+    storeState.conversations = SAMPLE_CONVERSATIONS;
+    storeState.currentConversation = {
+      ...SAMPLE_CONVERSATIONS[0],
+      hint_level: 'medium',
+    };
+    mockUpdateConversation.mockResolvedValueOnce({
+      ...SAMPLE_CONVERSATIONS[0],
+      hint_level: 'low',
+    });
+
+    const user = userEvent.setup();
+    renderWithProviders(<Dashboard />);
+
+    const select = screen.getByLabelText(/hint level/i) as HTMLSelectElement;
+    expect(select.value).toBe('medium');
+
+    await user.selectOptions(select, 'low');
+
+    await waitFor(() => {
+      expect(mockUpdateConversation).toHaveBeenCalledWith(1, {
+        hint_level: 'low',
+      });
+    });
   });
 });

@@ -42,10 +42,13 @@ export interface User {
   is_active: boolean;
 }
 
+export type HintLevel = 'low' | 'medium' | 'high';
+
 export interface Conversation {
   id: number;
   title: string;
   pinned: boolean;
+  hint_level: HintLevel;
   created_at: string;
   message_count: number;
 }
@@ -133,7 +136,7 @@ export const chatAPI = {
 
   async updateConversation(
     conversationId: number,
-    patch: { title?: string; pinned?: boolean },
+    patch: { title?: string; pinned?: boolean; hint_level?: HintLevel },
   ): Promise<Conversation> {
     const response = await api.patch(
       `/chat/conversations/${conversationId}`,

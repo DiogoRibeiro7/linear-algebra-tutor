@@ -40,6 +40,10 @@ class Conversation(Base):
     title: Mapped[Optional[str]]
     # server_default makes the alembic ADD COLUMN backfill existing rows.
     pinned: Mapped[bool] = mapped_column(default=False, server_default="0")
+    # Stored as a plain string; the API layer narrows it with a Literal.
+    hint_level: Mapped[str] = mapped_column(
+        default="medium", server_default="medium"
+    )
     created_at: Mapped[datetime] = mapped_column(default=utcnow)
     updated_at: Mapped[datetime] = mapped_column(
         default=utcnow, onupdate=utcnow

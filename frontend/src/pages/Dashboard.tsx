@@ -3,7 +3,7 @@
  */
 import { useEffect, useMemo, useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { chatAPI } from '@/services/api';
+import { chatAPI, type HintLevel } from '@/services/api';
 import { useStore } from '@/store';
 import { ChatInterface } from '@/components/ChatInterface';
 import {
@@ -72,6 +72,19 @@ export function Dashboard() {
     mutationFn: ({ id, pinned }: { id: number; pinned: boolean }) =>
       chatAPI.updateConversation(id, { pinned }),
     onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['conversations'] });
+    },
+  });
+
+  // Update hint level on the active conversation. Reuses the same PATCH
+  // endpoint as pinning; refetch picks up the new value across the UI.
+  const updateHintMutation = useMutation({
+    mutationFn: ({ id, hint_level }: { id: number; hint_level: HintLevel }) =>
+      chatAPI.updateConversation(id, { hint_level }),
+    onSuccess: (updated) => {
+      // Keep the active conversation in the store in sync so the select
+      // shows the new value immediately, before the listing refetches.
+      setCurrentConversation(updated);
       queryClient.invalidateQueries({ queryKey: ['conversations'] });
     },
   });
@@ -216,6 +229,32 @@ export function Dashboard() {
               {currentConversation?.title || 'Select a conversation'}
             </h2>
           </div>
+          {currentConversation && (
+            <div className="flex items-center gap-2 text-sm">
+              <label
+                htmlFor="hint-level-select"
+                className="text-gray-500 hidden sm:inline"
+              >
+                Hint level
+              </label>
+              <select
+                id="hint-level-select"
+                value={currentConversation.hint_level}
+                onChange={(e) =>
+                  updateHintMutation.mutate({
+                    id: currentConversation.id,
+                    hint_level: e.target.value as HintLevel,
+                  })
+                }
+                className="px-2 py-1 border border-gray-200 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500"
+                aria-label="Hint level"
+              >
+                <option value="low">Low (strict Socratic)</option>
+                <option value="medium">Medium (balanced)</option>
+                <option value="high">High (more direct)</option>
+              </select>
+            </div>
+          )}
         </div>
 
         {/* Chat interface */}

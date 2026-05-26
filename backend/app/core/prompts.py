@@ -99,3 +99,35 @@ Your explanation should:
 
 Make it clear, structured, and engaging.
 """
+
+
+# Per-conversation hint level. The base TUTOR_SYSTEM_PROMPT is already
+# Socratic; these suffixes nudge it stricter (low) or more direct (high).
+HINT_LEVEL_SUFFIXES = {
+    "low": (
+        "\n\nHINT LEVEL: minimal.\n"
+        "- Do not give direct hints until the student has shown at least"
+        " two genuine attempts.\n"
+        "- Prefer leading questions over statements.\n"
+        "- If pressed, give one tiny nudge per turn, never a full step."
+    ),
+    "medium": "",  # baseline behavior; no override
+    "high": (
+        "\n\nHINT LEVEL: generous.\n"
+        "- After one clarifying question, offer a concrete hint that"
+        " points at the next step.\n"
+        "- It's fine to walk through the solution structure with the"
+        " student even if they have not asked.\n"
+        "- Still avoid pasting the final numeric answer outright."
+    ),
+}
+
+
+def system_prompt_for(hint_level: str) -> str:
+    """Pick the system prompt for a conversation's hint level.
+
+    Falls back to the medium (baseline) prompt for unknown values so a
+    typo in the DB can't crash the chat path.
+    """
+    suffix = HINT_LEVEL_SUFFIXES.get(hint_level, "")
+    return TUTOR_SYSTEM_PROMPT + suffix

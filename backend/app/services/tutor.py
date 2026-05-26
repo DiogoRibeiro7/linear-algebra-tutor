@@ -24,26 +24,28 @@ class TutorService:
         self,
         question: str,
         conversation_history: Optional[List[Dict[str, str]]] = None,
-        use_rag: bool = True
+        use_rag: bool = True,
+        hint_level: str = "medium",
     ) -> Dict[str, Any]:
         """
         Answer a student's question.
-        
+
         Args:
             question: Student's question
             conversation_history: Previous messages
             use_rag: Whether to retrieve course materials
-            
+            hint_level: Socratic strictness; see prompts.HINT_LEVEL_SUFFIXES
+
         Returns:
             Response with answer and metadata
         """
         context = None
         retrieved_docs = []
-        
+
         # Retrieve relevant course materials if enabled
         if use_rag and self.rag.embeddings is not None:
             retrieved_docs = self.rag.retrieve(question, top_k=3)
-            
+
             # Format context from retrieved documents
             context_parts = []
             for i, doc in enumerate(retrieved_docs):
@@ -51,12 +53,14 @@ class TutorService:
                     f"[Source {i+1}: {doc['metadata']['source']}]\n{doc['content']}"
                 )
             context = "\n\n".join(context_parts)
-        
-        # Generate response using Claude
+
+        # Generate response using Claude with the level-tuned prompt
+        from app.core.prompts import system_prompt_for
         response = await self.claude.generate_response(
             user_message=question,
             conversation_history=conversation_history,
-            context=context
+            context=context,
+            system_prompt=system_prompt_for(hint_level),
         )
         
         return {

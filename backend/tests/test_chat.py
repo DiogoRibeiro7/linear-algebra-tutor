@@ -91,6 +91,66 @@ async def test_patch_conversation_renames(client, auth_headers):
     assert resp.json()["pinned"] is True
 
 
+async def test_patch_conversation_hint_level(client, auth_headers):
+    """PATCH should accept the new hint_level field and persist it."""
+    conv = await client.post(
+        "/api/v1/chat/conversations",
+        json={"title": "Vectors"},
+        headers=auth_headers,
+    )
+    cid = conv.json()["id"]
+    assert conv.json()["hint_level"] == "medium"  # default
+
+    resp = await client.patch(
+        f"/api/v1/chat/conversations/{cid}",
+        json={"hint_level": "high"},
+        headers=auth_headers,
+    )
+    assert resp.status_code == 200, resp.text
+    assert resp.json()["hint_level"] == "high"
+
+
+async def test_patch_rejects_invalid_hint_level(client, auth_headers):
+    """The Literal type on the schema must refuse anything outside the enum."""
+    conv = await client.post(
+        "/api/v1/chat/conversations",
+        json={"title": "Vectors"},
+        headers=auth_headers,
+    )
+    cid = conv.json()["id"]
+    resp = await client.patch(
+        f"/api/v1/chat/conversations/{cid}",
+        json={"hint_level": "extreme"},
+        headers=auth_headers,
+    )
+    assert resp.status_code == 422
+
+
+async def test_send_message_passes_hint_level_to_tutor(
+    client, auth_headers, mock_tutor
+):
+    """The conversation's hint_level should reach answer_question."""
+    conv = await client.post(
+        "/api/v1/chat/conversations",
+        json={"title": "Vectors"},
+        headers=auth_headers,
+    )
+    cid = conv.json()["id"]
+    await client.patch(
+        f"/api/v1/chat/conversations/{cid}",
+        json={"hint_level": "low"},
+        headers=auth_headers,
+    )
+
+    await client.post(
+        f"/api/v1/chat/conversations/{cid}/messages",
+        json={"content": "anything"},
+        headers=auth_headers,
+    )
+
+    assert mock_tutor.await_args.kwargs["hint_level"] == "low"
+
+
 async def test_patch_conversation_other_user_404(
     client, auth_headers, second_user_headers
 ):
@@ -116,12 +176,13 @@ async def test_list_conversations_orders_pinned_first(client, auth_headers):
         json={"title": "A"},
         headers=auth_headers,
     )
-    b = await client.post(
+    # B and C are created for ordering checks but we never touch their ids.
+    await client.post(
         "/api/v1/chat/conversations",
         json={"title": "B"},
         headers=auth_headers,
     )
-    c = await client.post(
+    await client.post(
         "/api/v1/chat/conversations",
         json={"title": "C"},
         headers=auth_headers,
@@ -137,7 +198,6 @@ async def test_list_conversations_orders_pinned_first(client, auth_headers):
     assert titles[0] == "A", titles
     # B and C are unpinned; order among them is updated_at desc (C newer)
     assert titles[1:] == ["C", "B"]
-    _ = b  # silence unused
 
 
 async def test_list_conversations(client, auth_headers):
