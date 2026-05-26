@@ -45,8 +45,10 @@ export function Register() {
         full_name: formData.full_name,
       });
       navigate('/login');
-    } catch (err: any) {
-      setError(err.response?.data?.detail || 'Registration failed. Please try again.');
+    } catch (err) {
+      const detail = (err as { response?: { data?: { detail?: string } } })
+        .response?.data?.detail;
+      setError(detail || 'Registration failed. Please try again.');
     } finally {
       setLoading(false);
     }

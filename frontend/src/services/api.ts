@@ -49,17 +49,22 @@ export interface Conversation {
   message_count: number;
 }
 
+export interface MessageMetadata {
+  sources?: Array<{ source: string; type: string }>;
+  [key: string]: unknown;
+}
+
 export interface Message {
   id: number;
   role: 'user' | 'assistant';
   content: string;
-  metadata?: any;
+  metadata?: MessageMetadata;
   created_at: string;
 }
 
 export interface ChatResponse {
   answer: string;
-  sources: any[];
+  sources: Array<{ source: string; type: string }>;
   conversation_id: number;
   message_id: number;
 }

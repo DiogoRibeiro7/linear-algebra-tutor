@@ -56,7 +56,7 @@ export function MessageBubble({ message }: MessageBubbleProps) {
                 Sources ({message.metadata.sources.length})
               </summary>
               <ul className="mt-1 space-y-1 pl-4">
-                {message.metadata.sources.map((source: any, idx: number) => (
+                {message.metadata.sources.map((source, idx) => (
                   <li key={idx} className="list-disc">
                     {source.source} ({source.type})
                   </li>

@@ -24,8 +24,10 @@ export function Login() {
       const token = await authAPI.login(username, password);
       setToken(token);
       navigate('/dashboard');
-    } catch (err: any) {
-      setError(err.response?.data?.detail || 'Login failed. Please try again.');
+    } catch (err) {
+      const detail = (err as { response?: { data?: { detail?: string } } })
+        .response?.data?.detail;
+      setError(detail || 'Login failed. Please try again.');
     } finally {
       setLoading(false);
     }
