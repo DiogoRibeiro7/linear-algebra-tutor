@@ -6,7 +6,16 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { chatAPI } from '@/services/api';
 import { useStore } from '@/store';
 import { ChatInterface } from '@/components/ChatInterface';
-import { Menu, Plus, MessageSquare, LogOut, Search, User } from 'lucide-react';
+import {
+  LogOut,
+  Menu,
+  MessageSquare,
+  Pin,
+  PinOff,
+  Plus,
+  Search,
+  User,
+} from 'lucide-react';
 
 export function Dashboard() {
   const queryClient = useQueryClient();
@@ -52,6 +61,17 @@ export function Dashboard() {
     onSuccess: (newConversation) => {
       addConversation(newConversation);
       setCurrentConversation(newConversation);
+      queryClient.invalidateQueries({ queryKey: ['conversations'] });
+    },
+  });
+
+  // Toggle pinned on a single conversation. Optimistic update keeps the
+  // sidebar responsive; refetch reconciles with the server's canonical
+  // ordering (pinned-first, then updated_at desc).
+  const togglePinMutation = useMutation({
+    mutationFn: ({ id, pinned }: { id: number; pinned: boolean }) =>
+      chatAPI.updateConversation(id, { pinned }),
+    onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['conversations'] });
     },
   });
@@ -115,25 +135,49 @@ export function Dashboard() {
               No conversations match &ldquo;{searchQuery}&rdquo;.
             </p>
           )}
-          {filteredConversations.map((conv) => (
-            <button
-              key={conv.id}
-              onClick={() => setCurrentConversation(conv)}
-              className={`w-full text-left px-3 py-2 rounded-lg mb-1 transition ${
-                currentConversation?.id === conv.id
-                  ? 'bg-primary-50 text-primary-700'
-                  : 'hover:bg-gray-100 text-gray-700'
-              }`}
-            >
-              <div className="flex items-center gap-2">
-                <MessageSquare size={16} />
-                <span className="truncate text-sm">{conv.title}</span>
+          {filteredConversations.map((conv) => {
+            const isActive = currentConversation?.id === conv.id;
+            return (
+              <div
+                key={conv.id}
+                className={`group flex items-start gap-1 px-1 py-0.5 rounded-lg mb-1 transition ${
+                  isActive ? 'bg-primary-50' : 'hover:bg-gray-100'
+                }`}
+              >
+                <button
+                  onClick={() => setCurrentConversation(conv)}
+                  className={`flex-1 min-w-0 text-left px-2 py-1.5 rounded ${
+                    isActive ? 'text-primary-700' : 'text-gray-700'
+                  }`}
+                >
+                  <div className="flex items-center gap-2">
+                    <MessageSquare size={16} className="flex-shrink-0" />
+                    <span className="truncate text-sm">{conv.title}</span>
+                  </div>
+                  <div className="text-xs text-gray-500 mt-1">
+                    {conv.message_count} messages
+                  </div>
+                </button>
+                <button
+                  onClick={() =>
+                    togglePinMutation.mutate({
+                      id: conv.id,
+                      pinned: !conv.pinned,
+                    })
+                  }
+                  aria-label={conv.pinned ? 'Unpin conversation' : 'Pin conversation'}
+                  aria-pressed={conv.pinned}
+                  className={`p-1.5 rounded transition ${
+                    conv.pinned
+                      ? 'text-primary-600 hover:bg-primary-100'
+                      : 'text-gray-400 opacity-0 group-hover:opacity-100 hover:bg-gray-200'
+                  }`}
+                >
+                  {conv.pinned ? <Pin size={14} /> : <PinOff size={14} />}
+                </button>
               </div>
-              <div className="text-xs text-gray-500 mt-1">
-                {conv.message_count} messages
-              </div>
-            </button>
-          ))}
+            );
+          })}
         </div>
 
         {/* User info */}

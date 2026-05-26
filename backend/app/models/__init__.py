@@ -38,6 +38,8 @@ class Conversation(Base):
     id: Mapped[int] = mapped_column(primary_key=True, index=True)
     user_id: Mapped[Optional[int]] = mapped_column(ForeignKey("users.id"))
     title: Mapped[Optional[str]]
+    # server_default makes the alembic ADD COLUMN backfill existing rows.
+    pinned: Mapped[bool] = mapped_column(default=False, server_default="0")
     created_at: Mapped[datetime] = mapped_column(default=utcnow)
     updated_at: Mapped[datetime] = mapped_column(
         default=utcnow, onupdate=utcnow

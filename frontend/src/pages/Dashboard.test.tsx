@@ -1,15 +1,18 @@
 import { describe, expect, it, vi, beforeEach } from 'vitest';
-import { screen, waitFor } from '@testing-library/react';
+import { fireEvent, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import type { Conversation, User } from '@/services/api';
 import { renderWithProviders } from '@/test/utils';
 
 const mockGetConversations = vi.fn();
 const mockCreateConversation = vi.fn();
+const mockUpdateConversation = vi.fn();
 vi.mock('@/services/api', () => ({
   chatAPI: {
     getConversations: () => mockGetConversations(),
     createConversation: (title?: string) => mockCreateConversation(title),
+    updateConversation: (id: number, patch: { pinned?: boolean; title?: string }) =>
+      mockUpdateConversation(id, patch),
   },
 }));
 
@@ -64,9 +67,27 @@ vi.mock('@/store', () => ({
 import { Dashboard } from './Dashboard';
 
 const SAMPLE_CONVERSATIONS: Conversation[] = [
-  { id: 1, title: 'Vectors intro', created_at: '2026-05-25T10:00:00Z', message_count: 3 },
-  { id: 2, title: 'Matrix multiplication', created_at: '2026-05-25T11:00:00Z', message_count: 7 },
-  { id: 3, title: 'Eigenvalues', created_at: '2026-05-25T12:00:00Z', message_count: 1 },
+  {
+    id: 1,
+    title: 'Vectors intro',
+    pinned: false,
+    created_at: '2026-05-25T10:00:00Z',
+    message_count: 3,
+  },
+  {
+    id: 2,
+    title: 'Matrix multiplication',
+    pinned: false,
+    created_at: '2026-05-25T11:00:00Z',
+    message_count: 7,
+  },
+  {
+    id: 3,
+    title: 'Eigenvalues',
+    pinned: false,
+    created_at: '2026-05-25T12:00:00Z',
+    message_count: 1,
+  },
 ];
 
 describe('Dashboard', () => {
@@ -74,6 +95,7 @@ describe('Dashboard', () => {
     resetStore();
     mockGetConversations.mockReset();
     mockCreateConversation.mockReset();
+    mockUpdateConversation.mockReset();
     mockGetConversations.mockResolvedValue(SAMPLE_CONVERSATIONS);
   });
 
@@ -109,5 +131,41 @@ describe('Dashboard', () => {
     expect(
       await screen.findByText(/no conversations match/i),
     ).toBeInTheDocument();
+  });
+
+  it('calls updateConversation with pinned=true when the pin button is clicked', async () => {
+    storeState.conversations = SAMPLE_CONVERSATIONS;
+    mockUpdateConversation.mockResolvedValueOnce({
+      ...SAMPLE_CONVERSATIONS[1],
+      pinned: true,
+    });
+    // userEvent's pointer-events check trips on opacity-0; fireEvent
+    // dispatches the click directly which mirrors the JS-level behavior
+    // we actually care about.
+    renderWithProviders(<Dashboard />);
+
+    // Exact-match name to avoid /pin conversation/i also matching "Unpin
+    // conversation" via substring.
+    const pinButtons = screen.getAllByRole('button', { name: 'Pin conversation' });
+    fireEvent.click(pinButtons[1]); // "Matrix multiplication"
+
+    await waitFor(() => {
+      expect(mockUpdateConversation).toHaveBeenCalledWith(2, { pinned: true });
+    });
+  });
+
+  it('renders a filled pin and Unpin label for already-pinned rows', () => {
+    storeState.conversations = [
+      { ...SAMPLE_CONVERSATIONS[0], pinned: true },
+      SAMPLE_CONVERSATIONS[1],
+    ];
+    renderWithProviders(<Dashboard />);
+
+    expect(
+      screen.getByRole('button', { name: 'Unpin conversation' }),
+    ).toHaveAttribute('aria-pressed', 'true');
+    expect(
+      screen.getByRole('button', { name: 'Pin conversation' }),
+    ).toHaveAttribute('aria-pressed', 'false');
   });
 });

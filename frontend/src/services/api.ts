@@ -45,6 +45,7 @@ export interface User {
 export interface Conversation {
   id: number;
   title: string;
+  pinned: boolean;
   created_at: string;
   message_count: number;
 }
@@ -126,6 +127,17 @@ export const chatAPI = {
     const response = await api.post(
       `/chat/conversations/${conversationId}/messages`,
       { content }
+    );
+    return response.data;
+  },
+
+  async updateConversation(
+    conversationId: number,
+    patch: { title?: string; pinned?: boolean },
+  ): Promise<Conversation> {
+    const response = await api.patch(
+      `/chat/conversations/${conversationId}`,
+      patch,
     );
     return response.data;
   },

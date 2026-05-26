@@ -36,7 +36,108 @@ async def test_create_conversation(client, auth_headers):
     body = resp.json()
     assert body["title"] == "Vectors 101"
     assert body["message_count"] == 0
+    assert body["pinned"] is False
     assert "id" in body
+
+
+async def test_patch_conversation_toggles_pinned(client, auth_headers):
+    """PATCH should accept a partial body and persist the change."""
+    conv = await client.post(
+        "/api/v1/chat/conversations",
+        json={"title": "Vectors"},
+        headers=auth_headers,
+    )
+    cid = conv.json()["id"]
+
+    pinned = await client.patch(
+        f"/api/v1/chat/conversations/{cid}",
+        json={"pinned": True},
+        headers=auth_headers,
+    )
+    assert pinned.status_code == 200, pinned.text
+    assert pinned.json()["pinned"] is True
+    # Title untouched since the request omitted it
+    assert pinned.json()["title"] == "Vectors"
+
+    unpinned = await client.patch(
+        f"/api/v1/chat/conversations/{cid}",
+        json={"pinned": False},
+        headers=auth_headers,
+    )
+    assert unpinned.json()["pinned"] is False
+
+
+async def test_patch_conversation_renames(client, auth_headers):
+    """Title-only PATCH should leave pinned unchanged."""
+    conv = await client.post(
+        "/api/v1/chat/conversations",
+        json={"title": "old"},
+        headers=auth_headers,
+    )
+    cid = conv.json()["id"]
+
+    # Pin first so we can confirm a title-only patch leaves it set.
+    await client.patch(
+        f"/api/v1/chat/conversations/{cid}",
+        json={"pinned": True},
+        headers=auth_headers,
+    )
+    resp = await client.patch(
+        f"/api/v1/chat/conversations/{cid}",
+        json={"title": "new"},
+        headers=auth_headers,
+    )
+    assert resp.json()["title"] == "new"
+    assert resp.json()["pinned"] is True
+
+
+async def test_patch_conversation_other_user_404(
+    client, auth_headers, second_user_headers
+):
+    """A user must not be able to pin another user's conversation."""
+    conv = await client.post(
+        "/api/v1/chat/conversations",
+        json={"title": "private"},
+        headers=auth_headers,
+    )
+    cid = conv.json()["id"]
+    resp = await client.patch(
+        f"/api/v1/chat/conversations/{cid}",
+        json={"pinned": True},
+        headers=second_user_headers,
+    )
+    assert resp.status_code == 404
+
+
+async def test_list_conversations_orders_pinned_first(client, auth_headers):
+    """Pinned rows must sort before unpinned regardless of updated_at."""
+    a = await client.post(
+        "/api/v1/chat/conversations",
+        json={"title": "A"},
+        headers=auth_headers,
+    )
+    b = await client.post(
+        "/api/v1/chat/conversations",
+        json={"title": "B"},
+        headers=auth_headers,
+    )
+    c = await client.post(
+        "/api/v1/chat/conversations",
+        json={"title": "C"},
+        headers=auth_headers,
+    )
+    # Pin the *oldest* one so updated_at order would otherwise put it last.
+    await client.patch(
+        f"/api/v1/chat/conversations/{a.json()['id']}",
+        json={"pinned": True},
+        headers=auth_headers,
+    )
+    resp = await client.get("/api/v1/chat/conversations", headers=auth_headers)
+    titles = [row["title"] for row in resp.json()]
+    assert titles[0] == "A", titles
+    # B and C are unpinned; order among them is updated_at desc (C newer)
+    assert titles[1:] == ["C", "B"]
+    _ = b  # silence unused
 
 
 async def test_list_conversations(client, auth_headers):

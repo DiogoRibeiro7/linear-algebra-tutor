@@ -38,11 +38,23 @@ class ConversationCreate(BaseModel):
     title: Optional[str] = "New Conversation"
 
 
+class ConversationUpdate(BaseModel):
+    """Partial-update payload for PATCH /conversations/{id}.
+
+    Any field left as None is ignored, so callers can update one field
+    at a time (e.g. just toggle pinned) without resending the others.
+    """
+
+    title: Optional[str] = None
+    pinned: Optional[bool] = None
+
+
 class ConversationResponse(BaseModel):
     """Conversation response schema."""
 
     id: int
     title: Optional[str] = None
+    pinned: bool = False
     created_at: str
     message_count: int
 
@@ -75,8 +87,55 @@ async def create_conversation(
     return ConversationResponse(
         id=conversation.id,
         title=conversation.title,
+        pinned=conversation.pinned,
         created_at=conversation.created_at.isoformat(),
         message_count=0,
+    )
+
+
+@router.patch(
+    "/conversations/{conversation_id}",
+    response_model=ConversationResponse,
+)
+async def update_conversation(
+    conversation_id: int,
+    data: ConversationUpdate,
+    current_user: User = Depends(get_current_active_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """Update fields on a conversation (currently: title, pinned)."""
+    result = await db.execute(
+        select(Conversation).where(
+            Conversation.id == conversation_id,
+            Conversation.user_id == current_user.id,
+        )
+    )
+    conversation = result.scalar_one_or_none()
+
+    if not conversation:
+        raise HTTPException(status_code=404, detail="Conversation not found")
+
+    # Apply only the fields the caller actually sent.
+    update = data.model_dump(exclude_unset=True)
+    for field, value in update.items():
+        setattr(conversation, field, value)
+
+    await db.commit()
+    await db.refresh(conversation)
+
+    msg_count_q = await db.execute(
+        select(func.count(Message.id)).where(
+            Message.conversation_id == conversation_id
+        )
+    )
+    msg_count = msg_count_q.scalar_one()
+
+    return ConversationResponse(
+        id=conversation.id,
+        title=conversation.title,
+        pinned=conversation.pinned,
+        created_at=conversation.created_at.isoformat(),
+        message_count=msg_count,
     )
 
 
@@ -85,20 +144,24 @@ async def get_conversations(
     current_user: User = Depends(get_current_active_user),
     db: AsyncSession = Depends(get_db),
 ):
-    """Get all conversations for the current user."""
+    """Get all conversations for the current user.
+
+    Sort key: pinned-first, then most-recently-updated.
+    """
     msg_count = func.count(Message.id)
     result = await db.execute(
         select(Conversation, msg_count)
         .outerjoin(Message, Message.conversation_id == Conversation.id)
         .where(Conversation.user_id == current_user.id)
         .group_by(Conversation.id)
-        .order_by(Conversation.updated_at.desc())
+        .order_by(Conversation.pinned.desc(), Conversation.updated_at.desc())
     )
 
     return [
         ConversationResponse(
             id=conv.id,
             title=conv.title,
+            pinned=conv.pinned,
             created_at=conv.created_at.isoformat(),
             message_count=count,
         )
