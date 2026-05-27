@@ -70,6 +70,37 @@ Quick start:
 python scripts/generate_embeddings.py
 ```
 
+### Task runner (just)
+
+Common commands are bundled in a `justfile` at the repo root. Install
+[just](https://github.com/casey/just) once:
+
+```bash
+# macOS
+brew install just
+# Windows
+winget install Casey.Just      # or: scoop install just
+# Cross-platform via pip (small Rust binary wrapper)
+pip install rust-just
+```
+
+Then run `just` (or `just --list`) to see all recipes. A few you'll
+reach for often:
+
+```bash
+just install          # backend pip + frontend yarn install
+just dev-backend      # FastAPI dev server
+just dev-frontend     # Vite dev server
+just test             # backend pytest + frontend vitest
+just check            # everything CI runs, in CI order
+just migrate          # alembic upgrade head
+just migration name="add foo"   # autogenerate a new revision
+```
+
+`just` recipes assume your Python venv is active and Node/Corepack are
+on PATH. If they aren't, the recipes will surface the underlying tool's
+error message — no extra wrapping.
+
 ### Database migrations
 
 Schema changes go through Alembic. The runtime app still calls
