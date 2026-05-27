@@ -44,6 +44,17 @@ export interface User {
 
 export type HintLevel = 'low' | 'medium' | 'high';
 
+/**
+ * Backend error envelope. The API always returns this shape on non-2xx
+ * responses; clients should narrow `err.response.data` through this
+ * type instead of reading ad-hoc fields.
+ */
+export interface ErrorResponse {
+  code: string;
+  message: string;
+  details?: Record<string, unknown> | null;
+}
+
 export interface Conversation {
   id: number;
   title: string;

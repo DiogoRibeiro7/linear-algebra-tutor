@@ -24,7 +24,7 @@ async def test_register_duplicate_username(client):
     dup = {**REGISTER_PAYLOAD, "email": "different@example.com"}
     resp = await client.post("/api/v1/auth/register", json=dup)
     assert resp.status_code == 400
-    assert "username" in resp.json()["detail"].lower()
+    assert "username" in resp.json()["message"].lower()
 
 
 async def test_register_duplicate_email(client):
@@ -32,7 +32,7 @@ async def test_register_duplicate_email(client):
     dup = {**REGISTER_PAYLOAD, "username": "different"}
     resp = await client.post("/api/v1/auth/register", json=dup)
     assert resp.status_code == 400
-    assert "email" in resp.json()["detail"].lower()
+    assert "email" in resp.json()["message"].lower()
 
 
 async def test_register_rejects_invalid_email(client):

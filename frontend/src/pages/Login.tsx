@@ -3,7 +3,7 @@
  */
 import { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
-import { authAPI } from '@/services/api';
+import { authAPI, type ErrorResponse } from '@/services/api';
 import { useStore } from '@/store';
 import { BookOpen, Loader2 } from 'lucide-react';
 
@@ -25,9 +25,9 @@ export function Login() {
       setToken(token);
       navigate('/dashboard');
     } catch (err) {
-      const detail = (err as { response?: { data?: { detail?: string } } })
-        .response?.data?.detail;
-      setError(detail || 'Login failed. Please try again.');
+      const message = (err as { response?: { data?: ErrorResponse } })
+        .response?.data?.message;
+      setError(message || 'Login failed. Please try again.');
     } finally {
       setLoading(false);
     }

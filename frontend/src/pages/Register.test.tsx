@@ -81,7 +81,12 @@ describe('Register', () => {
 
   it('surfaces server-side validation errors', async () => {
     mockRegister.mockRejectedValueOnce({
-      response: { data: { detail: 'Username already registered' } },
+      response: {
+        data: {
+          code: 'bad_request',
+          message: 'Username already registered',
+        },
+      },
     });
     const user = userEvent.setup();
     renderWithProviders(<Register />);

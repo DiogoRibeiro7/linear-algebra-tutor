@@ -42,9 +42,14 @@ describe('Login', () => {
     });
   });
 
-  it('shows the API error detail on failure', async () => {
+  it('shows the API error message on failure', async () => {
     mockLogin.mockRejectedValueOnce({
-      response: { data: { detail: 'Incorrect username or password' } },
+      response: {
+        data: {
+          code: 'unauthorized',
+          message: 'Incorrect username or password',
+        },
+      },
     });
     const user = userEvent.setup();
     renderWithProviders(<Login />);
@@ -59,7 +64,7 @@ describe('Login', () => {
     expect(mockNavigate).not.toHaveBeenCalled();
   });
 
-  it('shows a generic error when the API rejects without a detail', async () => {
+  it('shows a generic error when the API rejects without a message', async () => {
     mockLogin.mockRejectedValueOnce(new Error('network down'));
     const user = userEvent.setup();
     renderWithProviders(<Login />);

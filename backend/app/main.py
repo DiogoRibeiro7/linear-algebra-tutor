@@ -1,13 +1,19 @@
 """Main FastAPI application."""
 from fastapi import FastAPI
+from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
 from contextlib import asynccontextmanager
-from slowapi import _rate_limit_exceeded_handler
 from slowapi.errors import RateLimitExceeded
+from starlette.exceptions import HTTPException as StarletteHTTPException
 
 from app.config import get_settings
 from app.db.session import init_db, close_db
 from app.api import auth, chat
+from app.core.errors import (
+    http_exception_handler,
+    rate_limit_handler,
+    validation_exception_handler,
+)
 from app.core.rag import rag_system
 from app.core.limiter import limiter
 from pathlib import Path
@@ -48,11 +54,21 @@ app = FastAPI(
     lifespan=lifespan
 )
 
-# Wire rate limiting (slowapi's handler is typed narrower than Starlette wants)
+# Wire rate limiting + the uniform error envelope. The starlette
+# HTTPException is what FastAPI's HTTPException inherits from, so a
+# single handler covers both.
 app.state.limiter = limiter
 app.add_exception_handler(
+    StarletteHTTPException,
+    http_exception_handler,  # type: ignore[arg-type]
+)
+app.add_exception_handler(
+    RequestValidationError,
+    validation_exception_handler,  # type: ignore[arg-type]
+)
+app.add_exception_handler(
     RateLimitExceeded,
-    _rate_limit_exceeded_handler,  # type: ignore[arg-type]
+    rate_limit_handler,  # type: ignore[arg-type]
 )
 
 # Configure CORS

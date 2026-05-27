@@ -3,7 +3,7 @@
  */
 import { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
-import { authAPI } from '@/services/api';
+import { authAPI, type ErrorResponse } from '@/services/api';
 import { BookOpen, Loader2 } from 'lucide-react';
 
 export function Register() {
@@ -46,9 +46,9 @@ export function Register() {
       });
       navigate('/login');
     } catch (err) {
-      const detail = (err as { response?: { data?: { detail?: string } } })
-        .response?.data?.detail;
-      setError(detail || 'Registration failed. Please try again.');
+      const message = (err as { response?: { data?: ErrorResponse } })
+        .response?.data?.message;
+      setError(message || 'Registration failed. Please try again.');
     } finally {
       setLoading(false);
     }

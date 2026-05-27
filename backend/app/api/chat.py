@@ -1,12 +1,11 @@
 """Chat API endpoints."""
 
+from typing import List, Literal, Optional, cast
+
 from fastapi import APIRouter, Depends, HTTPException, Request
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import func, select
 from pydantic import BaseModel
-from typing import List, Literal, Optional
-
-HintLevel = Literal["low", "medium", "high"]
 
 from app.config import get_settings
 from app.core.limiter import limiter
@@ -14,6 +13,8 @@ from app.core.security import get_current_active_user
 from app.db.session import get_db
 from app.models import User, Conversation, Message
 from app.services.tutor import tutor_service
+
+HintLevel = Literal["low", "medium", "high"]
 
 settings = get_settings()
 router = APIRouter()
@@ -92,7 +93,7 @@ async def create_conversation(
         id=conversation.id,
         title=conversation.title,
         pinned=conversation.pinned,
-        hint_level=conversation.hint_level,
+        hint_level=cast(HintLevel, conversation.hint_level),
         created_at=conversation.created_at.isoformat(),
         message_count=0,
     )
@@ -139,7 +140,7 @@ async def update_conversation(
         id=conversation.id,
         title=conversation.title,
         pinned=conversation.pinned,
-        hint_level=conversation.hint_level,
+        hint_level=cast(HintLevel, conversation.hint_level),
         created_at=conversation.created_at.isoformat(),
         message_count=msg_count,
     )
@@ -168,7 +169,7 @@ async def get_conversations(
             id=conv.id,
             title=conv.title,
             pinned=conv.pinned,
-            hint_level=conv.hint_level,
+            hint_level=cast(HintLevel, conv.hint_level),
             created_at=conv.created_at.isoformat(),
             message_count=count,
         )
@@ -220,7 +221,7 @@ async def send_message(
         question=message.content,
         conversation_history=conversation_history,
         use_rag=True,
-        hint_level=conversation.hint_level,
+        hint_level=cast(HintLevel, conversation.hint_level),
     )
 
     # Save assistant response
