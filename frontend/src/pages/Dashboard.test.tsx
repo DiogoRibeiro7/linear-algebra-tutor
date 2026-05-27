@@ -72,6 +72,7 @@ const SAMPLE_CONVERSATIONS: Conversation[] = [
     title: 'Vectors intro',
     pinned: false,
     hint_level: 'medium',
+    topic: null,
     created_at: '2026-05-25T10:00:00Z',
     message_count: 3,
   },
@@ -80,6 +81,7 @@ const SAMPLE_CONVERSATIONS: Conversation[] = [
     title: 'Matrix multiplication',
     pinned: false,
     hint_level: 'medium',
+    topic: null,
     created_at: '2026-05-25T11:00:00Z',
     message_count: 7,
   },
@@ -88,6 +90,7 @@ const SAMPLE_CONVERSATIONS: Conversation[] = [
     title: 'Eigenvalues',
     pinned: false,
     hint_level: 'medium',
+    topic: null,
     created_at: '2026-05-25T12:00:00Z',
     message_count: 1,
   },
@@ -184,6 +187,7 @@ describe('Dashboard', () => {
     storeState.currentConversation = {
       ...SAMPLE_CONVERSATIONS[0],
       hint_level: 'medium',
+    topic: null,
     };
     mockUpdateConversation.mockResolvedValueOnce({
       ...SAMPLE_CONVERSATIONS[0],
@@ -203,5 +207,68 @@ describe('Dashboard', () => {
         hint_level: 'low',
       });
     });
+  });
+
+  it('PATCHes the topic on blur when the value has changed', async () => {
+    storeState.conversations = SAMPLE_CONVERSATIONS;
+    storeState.currentConversation = SAMPLE_CONVERSATIONS[0];
+    mockUpdateConversation.mockResolvedValueOnce({
+      ...SAMPLE_CONVERSATIONS[0],
+      topic: 'vectors',
+    });
+
+    const user = userEvent.setup();
+    renderWithProviders(<Dashboard />);
+
+    const input = screen.getByLabelText(/^topic$/i) as HTMLInputElement;
+    await user.type(input, 'vectors');
+    await user.tab(); // fires onBlur
+
+    await waitFor(() => {
+      expect(mockUpdateConversation).toHaveBeenCalledWith(1, {
+        topic: 'vectors',
+      });
+    });
+  });
+
+  it('sends topic=null when the input is cleared', async () => {
+    storeState.conversations = SAMPLE_CONVERSATIONS;
+    storeState.currentConversation = {
+      ...SAMPLE_CONVERSATIONS[0],
+      topic: 'vectors',
+    };
+    mockUpdateConversation.mockResolvedValueOnce({
+      ...SAMPLE_CONVERSATIONS[0],
+      topic: null,
+    });
+
+    const user = userEvent.setup();
+    renderWithProviders(<Dashboard />);
+
+    const input = screen.getByLabelText(/^topic$/i) as HTMLInputElement;
+    expect(input.value).toBe('vectors');
+    await user.clear(input);
+    await user.tab();
+
+    await waitFor(() => {
+      expect(mockUpdateConversation).toHaveBeenCalledWith(1, { topic: null });
+    });
+  });
+
+  it('does not PATCH topic on blur when the value is unchanged', async () => {
+    storeState.conversations = SAMPLE_CONVERSATIONS;
+    storeState.currentConversation = {
+      ...SAMPLE_CONVERSATIONS[0],
+      topic: 'vectors',
+    };
+
+    const user = userEvent.setup();
+    renderWithProviders(<Dashboard />);
+
+    const input = screen.getByLabelText(/^topic$/i) as HTMLInputElement;
+    input.focus();
+    await user.tab(); // blur without typing
+
+    expect(mockUpdateConversation).not.toHaveBeenCalled();
   });
 });

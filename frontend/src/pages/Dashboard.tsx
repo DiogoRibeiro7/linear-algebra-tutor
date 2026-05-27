@@ -89,6 +89,17 @@ export function Dashboard() {
     },
   });
 
+  // Update RAG topic filter on the active conversation. Empty string is
+  // sent as null so the backend treats it as "no filter".
+  const updateTopicMutation = useMutation({
+    mutationFn: ({ id, topic }: { id: number; topic: string | null }) =>
+      chatAPI.updateConversation(id, { topic }),
+    onSuccess: (updated) => {
+      setCurrentConversation(updated);
+      queryClient.invalidateQueries({ queryKey: ['conversations'] });
+    },
+  });
+
   const handleLogout = () => {
     setToken(null);
     setUser(null);
@@ -231,6 +242,30 @@ export function Dashboard() {
           </div>
           {currentConversation && (
             <div className="flex items-center gap-2 text-sm">
+              <label
+                htmlFor="topic-input"
+                className="text-gray-500 hidden sm:inline"
+              >
+                Topic
+              </label>
+              <input
+                id="topic-input"
+                type="text"
+                defaultValue={currentConversation.topic ?? ''}
+                placeholder="all topics"
+                // onBlur (not onChange) so we don't PATCH on every keystroke.
+                onBlur={(e) => {
+                  const next = e.target.value.trim() || null;
+                  if (next !== (currentConversation.topic ?? null)) {
+                    updateTopicMutation.mutate({
+                      id: currentConversation.id,
+                      topic: next,
+                    });
+                  }
+                }}
+                className="w-32 px-2 py-1 border border-gray-200 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500"
+                aria-label="Topic"
+              />
               <label
                 htmlFor="hint-level-select"
                 className="text-gray-500 hidden sm:inline"

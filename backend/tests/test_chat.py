@@ -126,6 +126,58 @@ async def test_patch_rejects_invalid_hint_level(client, auth_headers):
     assert resp.status_code == 422
 
 
+async def test_patch_conversation_topic(client, auth_headers):
+    """PATCH should accept a topic string and persist it; default is None."""
+    conv = await client.post(
+        "/api/v1/chat/conversations",
+        json={"title": "Vectors"},
+        headers=auth_headers,
+    )
+    cid = conv.json()["id"]
+    assert conv.json()["topic"] is None
+
+    resp = await client.patch(
+        f"/api/v1/chat/conversations/{cid}",
+        json={"topic": "vectors"},
+        headers=auth_headers,
+    )
+    assert resp.status_code == 200, resp.text
+    assert resp.json()["topic"] == "vectors"
+
+    # Setting back to null clears the filter for subsequent messages.
+    cleared = await client.patch(
+        f"/api/v1/chat/conversations/{cid}",
+        json={"topic": None},
+        headers=auth_headers,
+    )
+    assert cleared.json()["topic"] is None
+
+
+async def test_send_message_passes_topic_to_tutor(
+    client, auth_headers, mock_tutor
+):
+    """The conversation's topic should reach answer_question."""
+    conv = await client.post(
+        "/api/v1/chat/conversations",
+        json={"title": "Vectors"},
+        headers=auth_headers,
+    )
+    cid = conv.json()["id"]
+    await client.patch(
+        f"/api/v1/chat/conversations/{cid}",
+        json={"topic": "vectors"},
+        headers=auth_headers,
+    )
+
+    await client.post(
+        f"/api/v1/chat/conversations/{cid}/messages",
+        json={"content": "anything"},
+        headers=auth_headers,
+    )
+
+    assert mock_tutor.await_args.kwargs["topic"] == "vectors"
+
+
 async def test_send_message_passes_hint_level_to_tutor(
     client, auth_headers, mock_tutor
 ):

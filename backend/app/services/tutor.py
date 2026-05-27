@@ -26,6 +26,7 @@ class TutorService:
         conversation_history: Optional[List[Dict[str, str]]] = None,
         use_rag: bool = True,
         hint_level: str = "medium",
+        topic: Optional[str] = None,
     ) -> Dict[str, Any]:
         """
         Answer a student's question.
@@ -35,6 +36,8 @@ class TutorService:
             conversation_history: Previous messages
             use_rag: Whether to retrieve course materials
             hint_level: Socratic strictness; see prompts.HINT_LEVEL_SUFFIXES
+            topic: Optional conversation topic; forwarded as a metadata
+                filter so retrieval stays inside that subject area
 
         Returns:
             Response with answer and metadata
@@ -44,7 +47,9 @@ class TutorService:
 
         # Retrieve relevant course materials if enabled
         if use_rag and self.rag.embeddings is not None:
-            retrieved_docs = self.rag.retrieve(question, top_k=3)
+            retrieved_docs = self.rag.retrieve(
+                question, top_k=3, topic=topic
+            )
 
             # Format context from retrieved documents
             context_parts = []

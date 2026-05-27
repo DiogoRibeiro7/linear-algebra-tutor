@@ -1,5 +1,5 @@
 """RAG (Retrieval-Augmented Generation) system for course materials."""
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List, Optional, Tuple
 from sentence_transformers import SentenceTransformer
 import numpy as np
 from pathlib import Path
@@ -8,6 +8,28 @@ import json
 from app.config import get_settings
 
 settings = get_settings()
+
+
+def parse_frontmatter(content: str) -> Tuple[Dict[str, str], str]:
+    """Strip a `---key: value---` YAML-ish header off a markdown string.
+
+    Returns (metadata, body). If the file has no header, returns ({}, content)
+    unchanged. We deliberately avoid pulling in pyyaml — the header is just
+    a few flat key/value lines, and a stricter parser is happy to reject
+    anything more elaborate.
+    """
+    if not content.startswith("---\n"):
+        return {}, content
+    end = content.find("\n---\n", 4)
+    if end == -1:
+        return {}, content
+    header, body = content[4:end], content[end + 5:]
+    meta: Dict[str, str] = {}
+    for line in header.splitlines():
+        if ":" in line:
+            key, value = line.split(":", 1)
+            meta[key.strip()] = value.strip()
+    return meta, body
 
 
 class RAGSystem:
@@ -33,15 +55,19 @@ class RAGSystem:
         for file_path in materials_dir.rglob("*.md"):
             with open(file_path, 'r', encoding='utf-8') as f:
                 content = f.read()
-                
-            # Split into chunks (simple splitting by sections)
-            chunks = self._split_into_chunks(content)
-            
+
+            # Optional `--- chapter: 1 / topic: vectors ---` front-matter
+            # gets merged into each chunk's metadata so retrieve() can
+            # filter by it. Falls through cleanly when the file has no header.
+            extra_meta, body = parse_frontmatter(content)
+            chunks = self._split_into_chunks(body)
+
             for chunk in chunks:
                 self.documents.append(chunk)
                 self.metadata.append({
                     "source": str(file_path.relative_to(materials_dir)),
-                    "type": "course_material"
+                    "type": "course_material",
+                    **extra_meta,
                 })
         
         # Load Python notebooks/code examples (chunked so long files don't
@@ -104,16 +130,20 @@ class RAGSystem:
         self,
         query: str,
         top_k: int = 3,
-        filter_type: Optional[str] = None
+        filter_type: Optional[str] = None,
+        chapter: Optional[str] = None,
+        topic: Optional[str] = None,
     ) -> List[Dict[str, Any]]:
         """
         Retrieve most relevant documents for a query.
-        
+
         Args:
             query: Search query
             top_k: Number of results to return
             filter_type: Optional filter for document type
-            
+            chapter: Optional filter on the chapter metadata field
+            topic: Optional filter on the topic metadata field
+
         Returns:
             List of relevant documents with metadata and scores
         """
@@ -122,27 +152,37 @@ class RAGSystem:
         query_embedding = self.embedding_model.encode(
             [query], normalize_embeddings=True
         )[0]
-        
+
         # Calculate similarity scores
         similarities = np.dot(self.embeddings, query_embedding)
-        
-        # Apply filter if specified
-        if filter_type:
+
+        # Build the filter as an AND across whichever fields the caller set.
+        # Compared as lowercase strings so retrieval is forgiving of casing.
+        def _matches(meta: Dict[str, Any]) -> bool:
+            if filter_type is not None and meta.get("type") != filter_type:
+                return False
+            if chapter is not None and str(meta.get("chapter", "")).lower() != chapter.lower():
+                return False
+            if topic is not None and str(meta.get("topic", "")).lower() != topic.lower():
+                return False
+            return True
+
+        any_filter = any(f is not None for f in (filter_type, chapter, topic))
+        if any_filter:
             filtered_indices = [
-                i for i, meta in enumerate(self.metadata)
-                if meta.get("type") == filter_type
+                i for i, meta in enumerate(self.metadata) if _matches(meta)
             ]
             similarities = similarities[filtered_indices]
             valid_indices = filtered_indices
         else:
             valid_indices = list(range(len(self.documents)))
-        
+
         # Get top k
         top_indices = np.argsort(similarities)[-top_k:][::-1]
-        
+
         results = []
         for idx in top_indices:
-            original_idx = valid_indices[idx] if filter_type else idx
+            original_idx = valid_indices[idx] if any_filter else idx
             results.append({
                 "content": self.documents[original_idx],
                 "metadata": self.metadata[original_idx],

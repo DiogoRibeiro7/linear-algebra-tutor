@@ -51,6 +51,7 @@ class ConversationUpdate(BaseModel):
     title: Optional[str] = None
     pinned: Optional[bool] = None
     hint_level: Optional[HintLevel] = None
+    topic: Optional[str] = None
 
 
 class ConversationResponse(BaseModel):
@@ -60,6 +61,7 @@ class ConversationResponse(BaseModel):
     title: Optional[str] = None
     pinned: bool = False
     hint_level: HintLevel = "medium"
+    topic: Optional[str] = None
     created_at: str
     message_count: int
 
@@ -94,6 +96,7 @@ async def create_conversation(
         title=conversation.title,
         pinned=conversation.pinned,
         hint_level=cast(HintLevel, conversation.hint_level),
+        topic=conversation.topic,
         created_at=conversation.created_at.isoformat(),
         message_count=0,
     )
@@ -141,6 +144,7 @@ async def update_conversation(
         title=conversation.title,
         pinned=conversation.pinned,
         hint_level=cast(HintLevel, conversation.hint_level),
+        topic=conversation.topic,
         created_at=conversation.created_at.isoformat(),
         message_count=msg_count,
     )
@@ -170,6 +174,7 @@ async def get_conversations(
             title=conv.title,
             pinned=conv.pinned,
             hint_level=cast(HintLevel, conv.hint_level),
+            topic=conv.topic,
             created_at=conv.created_at.isoformat(),
             message_count=count,
         )
@@ -222,6 +227,7 @@ async def send_message(
         conversation_history=conversation_history,
         use_rag=True,
         hint_level=cast(HintLevel, conversation.hint_level),
+        topic=conversation.topic,
     )
 
     # Save assistant response

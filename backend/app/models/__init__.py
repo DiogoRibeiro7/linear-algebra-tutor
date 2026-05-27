@@ -44,6 +44,8 @@ class Conversation(Base):
     hint_level: Mapped[str] = mapped_column(
         default="medium", server_default="medium"
     )
+    # Optional metadata filter. Empty/None means "retrieve from all topics".
+    topic: Mapped[Optional[str]] = mapped_column(default=None)
     created_at: Mapped[datetime] = mapped_column(default=utcnow)
     updated_at: Mapped[datetime] = mapped_column(
         default=utcnow, onupdate=utcnow

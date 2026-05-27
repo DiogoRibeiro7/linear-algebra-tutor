@@ -60,6 +60,7 @@ export interface Conversation {
   title: string;
   pinned: boolean;
   hint_level: HintLevel;
+  topic: string | null;
   created_at: string;
   message_count: number;
 }
@@ -147,7 +148,12 @@ export const chatAPI = {
 
   async updateConversation(
     conversationId: number,
-    patch: { title?: string; pinned?: boolean; hint_level?: HintLevel },
+    patch: {
+      title?: string;
+      pinned?: boolean;
+      hint_level?: HintLevel;
+      topic?: string | null;
+    },
   ): Promise<Conversation> {
     const response = await api.patch(
       `/chat/conversations/${conversationId}`,
