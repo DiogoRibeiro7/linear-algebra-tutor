@@ -363,7 +363,6 @@ This project is open source and available under the MIT License.
 ## 🙏 Acknowledgments
 
 - Built for TSIW program students at ESMAD
-- Powered by Anthropic's Claude AI
 - Inspired by modern AI tutoring systems
 
 ---
