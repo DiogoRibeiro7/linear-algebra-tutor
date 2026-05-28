@@ -1,0 +1,64 @@
+[tool.poetry]
+name = "linear-algebra-tutor-backend"
+version = "0.1.0"
+description = "FastAPI + RAG backend for the Linear Algebra AI Tutor."
+authors = ["Diogo Ribeiro <dfr@esmad.ipp.pt>"]
+license = "MIT"
+package-mode = false
+
+[tool.poetry.dependencies]
+python = "^3.11"
+
+# Web framework + ASGI server
+fastapi = "0.115.6"
+uvicorn = { extras = ["standard"], version = "0.27.0" }
+pydantic = { extras = ["email"], version = "2.5.3" }
+pydantic-settings = "2.1.0"
+
+# LLM
+anthropic = "0.18.0"
+
+# Embeddings / vector retrieval
+sentence-transformers = "2.3.1"
+
+# Database
+sqlalchemy = "2.0.25"
+alembic = "1.13.1"
+psycopg2-binary = "2.9.9"
+asyncpg = "0.29.0"
+aiosqlite = "0.19.0"
+
+# Auth & security (post dependabot-clearing bumps)
+python-jose = { extras = ["cryptography"], version = "3.4.0" }
+passlib = { extras = ["bcrypt"], version = "1.7.4" }
+python-multipart = "0.0.27"
+bcrypt = "4.1.2"
+
+# Cache
+redis = "5.0.1"
+aioredis = "2.0.1"
+
+# Rate limiting
+slowapi = "0.1.9"
+
+# Utilities
+python-dotenv = "1.2.2"
+httpx = "0.26.0"
+numpy = "1.26.3"
+sympy = "1.12"
+matplotlib = "3.8.2"
+tzdata = "2026.2"  # Windows has no system tzdb; alembic file_template needs UTC
+
+[tool.poetry.group.test.dependencies]
+pytest = "7.4.4"
+pytest-asyncio = "0.23.3"
+pytest-cov = "4.1.0"
+
+[tool.poetry.group.dev.dependencies]
+black = "24.3.0"
+ruff = "0.1.14"
+mypy = "1.8.0"
+
+[build-system]
+requires = ["poetry-core>=1.0.0"]
+build-backend = "poetry.core.masonry.api"

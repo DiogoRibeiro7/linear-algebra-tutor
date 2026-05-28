@@ -65,12 +65,10 @@ cd linear-algebra-tutor
 ```bash
 cd backend
 
-# Create virtual environment
-python -m venv venv
-source venv/bin/activate  # On Windows: venv\Scripts\activate
-
-# Install dependencies
-pip install -r requirements.txt
+# Install Poetry once (https://python-poetry.org/docs/#installation),
+# then have it create an in-project venv and install everything:
+poetry config virtualenvs.in-project true --local
+poetry install --no-root --with test,dev
 
 # Create .env file from template
 cp ../.env.example .env
@@ -112,7 +110,7 @@ mkdir -p data/materials
 5. **Generate Embeddings**
 ```bash
 # From project root
-python scripts/generate_embeddings.py
+cd backend && poetry run python ../scripts/generate_embeddings.py
 ```
 
 6. **Run the Application**
@@ -120,8 +118,7 @@ python scripts/generate_embeddings.py
 **Terminal 1 - Backend:**
 ```bash
 cd backend
-source venv/bin/activate
-python -m app.main
+poetry run python -m app.main
 # Backend will run on http://localhost:8000
 ```
 
@@ -178,7 +175,8 @@ linear-algebra-tutor/
 │   │   ├── db/                # Database setup
 │   │   ├── config.py          # Configuration
 │   │   └── main.py            # FastAPI app
-│   ├── requirements.txt
+│   ├── pyproject.toml
+│   ├── poetry.lock
 │   └── Dockerfile
 ├── frontend/                   # React frontend
 │   ├── src/

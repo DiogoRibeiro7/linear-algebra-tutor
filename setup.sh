@@ -41,22 +41,19 @@ check_prerequisites() {
 setup_backend() {
     echo "Setting up backend..."
     cd backend
-    
-    # Create virtual environment
-    if [ ! -d "venv" ]; then
-        echo "Creating Python virtual environment..."
-        python3 -m venv venv
+
+    # Poetry is the only blessed package manager for the backend.
+    if ! command -v poetry &> /dev/null; then
+        echo "❌ poetry not found. Install via https://python-poetry.org/docs/#installation"
+        exit 1
     fi
-    
-    # Activate virtual environment
-    echo "Activating virtual environment..."
-    source venv/bin/activate
-    
-    # Install dependencies
+
+    # Keep the venv inside backend/ so contributors don't have to hunt
+    # for it under ~/.cache/pypoetry.
+    poetry config virtualenvs.in-project true --local
     echo "Installing Python dependencies..."
-    pip install -q --upgrade pip
-    pip install -q -r requirements.txt
-    
+    poetry install --no-root --with test,dev --quiet
+
     echo "✓ Backend setup complete"
     cd ..
     echo ""
@@ -134,12 +131,10 @@ main() {
     echo "   (Example materials included)"
     echo ""
     echo "3. Generate embeddings:"
-    echo "   python scripts/generate_embeddings.py"
+    echo "   cd backend && poetry run python ../scripts/generate_embeddings.py"
     echo ""
     echo "4. Start the backend (Terminal 1):"
-    echo "   cd backend"
-    echo "   source venv/bin/activate"
-    echo "   python -m app.main"
+    echo "   cd backend && poetry run python -m app.main"
     echo ""
     echo "5. Start the frontend (Terminal 2):"
     echo "   cd frontend"

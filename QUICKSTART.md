@@ -126,9 +126,8 @@ POST /api/v1/chat/conversations/:id/messages    # Send message
 
 ### Backend won't start
 1. Check Python version: `python --version` (need 3.11+)
-2. Activate virtual environment
-3. Install dependencies: `pip install -r requirements.txt`
-4. Check .env file exists and has ANTHROPIC_API_KEY
+2. Install dependencies: `cd backend && poetry install --no-root --with test,dev`
+3. Check .env file exists and has ANTHROPIC_API_KEY
 
 ### Frontend won't start
 1. Check Node version: `node --version` (need 20+)

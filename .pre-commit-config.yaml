@@ -14,7 +14,7 @@ repos:
       - id: check-added-large-files
         args: ['--maxkb=500']
 
-  # Ruff: same version pinned in backend/requirements.txt so local fixes
+  # Ruff: same version pinned in backend/pyproject.toml so local fixes
   # match what CI would flag.
   - repo: https://github.com/astral-sh/ruff-pre-commit
     rev: v0.1.14
@@ -23,7 +23,7 @@ repos:
         args: [--fix]
         files: ^backend/.*\.py$
 
-  # Black: matches the version in backend/requirements.txt.
+  # Black: matches the version in backend/pyproject.toml.
   - repo: https://github.com/psf/black
     rev: 24.1.1
     hooks:

@@ -310,8 +310,9 @@ When contributing to this project:
 ### Common Issues
 
 **"ModuleNotFoundError"**
-- Activate virtual environment
-- Run `pip install -r requirements.txt`
+- Run `cd backend && poetry install --no-root --with test,dev`
+- Use `poetry run <command>` (or `poetry shell`) to make sure the
+  module path includes the project venv
 
 **"ANTHROPIC_API_KEY not set"**
 - Create .env file from .env.example

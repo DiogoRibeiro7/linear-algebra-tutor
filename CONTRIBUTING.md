@@ -44,7 +44,7 @@ Thank you for your interest in contributing! This project aims to provide high-q
    ```bash
    # Backend tests (pytest + coverage gate)
    cd backend
-   pytest
+   poetry run pytest
 
    # Frontend tests (Vitest + React Testing Library)
    cd frontend
@@ -88,7 +88,7 @@ Then run `just` (or `just --list`) to see all recipes. A few you'll
 reach for often:
 
 ```bash
-just install          # backend pip + frontend yarn install
+just install          # backend poetry install + frontend yarn install
 just dev-backend      # FastAPI dev server
 just dev-frontend     # Vite dev server
 just test             # backend pytest + frontend vitest
@@ -97,9 +97,8 @@ just migrate          # alembic upgrade head
 just migration name="add foo"   # autogenerate a new revision
 ```
 
-`just` recipes assume your Python venv is active and Node/Corepack are
-on PATH. If they aren't, the recipes will surface the underlying tool's
-error message — no extra wrapping.
+`just` recipes assume Poetry and Node/Corepack are on PATH. If they
+aren't, the underlying tool's error surfaces unwrapped.
 
 ### Database migrations
 
