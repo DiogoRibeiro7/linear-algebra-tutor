@@ -1,0 +1,25 @@
+{
+  "schema": 3,
+  "required_executas": [],
+  "storage": { "kv": true, "files": false },
+  "system_prompt_addendum": "Linear Algebra AI Tutor is an interactive Socratic learning application. When a user wants to study linear algebra with this app, open its main tutoring view. The view provides source-grounded explanations, selectable hint levels, and saved conversations.",
+  "tags": ["education", "linear-algebra", "socratic-tutoring", "rag"],
+  "ui": {
+    "bundle": { "format": "static-spa", "entry": "index.html" },
+    "views": [
+      {
+        "name": "main",
+        "title": "Linear Algebra AI Tutor",
+        "default": true,
+        "min_size": { "w": 400, "h": 360 },
+        "default_size": { "w": 960, "h": 640 },
+        "max_size": { "w": 1600, "h": 1200 },
+        "single_instance": true
+      }
+    ],
+    "host_api": {
+      "llm": ["complete"],
+      "storage": ["get", "set", "delete", "list"]
+    }
+  }
+}

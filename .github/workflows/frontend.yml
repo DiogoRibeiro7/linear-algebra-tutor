@@ -47,5 +47,11 @@ jobs:
       - name: Tests
         run: yarn test
 
+      - name: Anna material index tests
+        run: yarn test:anna-materials
+
       - name: Build
         run: yarn build
+
+      - name: Build Anna bundle
+        run: yarn build:anna

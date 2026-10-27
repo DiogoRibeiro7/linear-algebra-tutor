@@ -60,6 +60,10 @@ yarn-error.log*
 data/embeddings/*.npy
 data/embeddings/*.json
 
+# Anna generated static bundle and course index
+integrations/anna/bundle/
+frontend/anna/public/course-materials.json
+
 # Logs
 *.log
 logs/
