@@ -1,6 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
+import { isTutorConversation } from './models';
 
 const fake = vi.hoisted(() => ({
   stored: new Map<string, unknown>(),
@@ -58,6 +59,7 @@ describe('Anna tutoring window', () => {
     expect(await screen.findByText('How would you find the magnitude?')).toBeInTheDocument();
     expect(fake.complete).toHaveBeenCalledOnce();
     expect(screen.getAllByText('What is a vector magnitude?')).toHaveLength(3);
+    expect(screen.queryByRole('button', { name: 'Retry answer' })).not.toBeInTheDocument();
 
     window.unmount();
     render(<AnnaApp />);
@@ -70,5 +72,52 @@ describe('Anna tutoring window', () => {
     await user.click(await screen.findByRole('button', { name: 'Start learning' }));
     await user.selectOptions(screen.getByLabelText('Hints'), 'low');
     expect(screen.getByLabelText('Hints')).toHaveValue('low');
+  });
+
+  it('retries a failed model call without duplicating the saved student question', async () => {
+    const user = userEvent.setup();
+    fake.complete.mockRejectedValueOnce(new Error('Anna LLM temporarily unavailable'));
+    render(<AnnaApp />);
+
+    await user.click(await screen.findByRole('button', { name: 'Start learning' }));
+    await user.type(screen.getByRole('textbox', { name: 'Ask a linear algebra question' }),
+      'What is a vector magnitude?');
+    await user.click(screen.getByRole('button', { name: 'Send' }));
+
+    expect(await screen.findByText('Anna LLM temporarily unavailable')).toBeInTheDocument();
+    expect(await screen.findByRole('button', { name: 'Retry answer' })).toBeInTheDocument();
+    expect(screen.getByText('Retrying may use another Anna model call.')).toBeInTheDocument();
+
+    await user.click(screen.getByRole('button', { name: 'Retry answer' }));
+    expect(await screen.findByText('How would you find the magnitude?')).toBeInTheDocument();
+    expect(fake.complete).toHaveBeenCalledTimes(2);
+    expect(fake.complete.mock.calls[1][0].messages).toHaveLength(1);
+    expect(screen.getAllByText('What is a vector magnitude?')).toHaveLength(3);
+    expect(screen.queryByRole('button', { name: 'Retry answer' })).not.toBeInTheDocument();
+
+    const saved = [...fake.stored.values()].filter(isTutorConversation);
+    expect(saved).toHaveLength(1);
+    expect(saved[0].messages.map(({ role }) => role)).toEqual(['user', 'assistant']);
+  });
+
+  it('offers recovery after reopening a conversation with an unanswered question', async () => {
+    const user = userEvent.setup();
+    fake.complete.mockRejectedValueOnce(new Error('Model request interrupted'));
+    const window = render(<AnnaApp />);
+
+    await user.click(await screen.findByRole('button', { name: 'Start learning' }));
+    await user.type(screen.getByRole('textbox', { name: 'Ask a linear algebra question' }),
+      'What is a vector magnitude?');
+    await user.click(screen.getByRole('button', { name: 'Send' }));
+    expect(await screen.findByText('Model request interrupted')).toBeInTheDocument();
+
+    window.unmount();
+    render(<AnnaApp />);
+    await user.click(await screen.findByRole('button', { name: 'Retry answer' }));
+    expect(await screen.findByText('How would you find the magnitude?')).toBeInTheDocument();
+
+    const saved = [...fake.stored.values()].filter(isTutorConversation);
+    expect(saved).toHaveLength(1);
+    expect(saved[0].messages.map(({ role }) => role)).toEqual(['user', 'assistant']);
   });
 });
