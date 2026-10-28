@@ -16,9 +16,13 @@ export interface AnnaLLMResponse {
 }
 
 export interface AnnaStorage {
-  get(args: { key: string }): Promise<{ value?: unknown; exists?: boolean }>;
-  set(args: { key: string; value: unknown }): Promise<unknown>;
+  get(args: { key: string }): Promise<{ value?: unknown; exists?: boolean; etag?: string }>;
+  set(args: { key: string; value: unknown; if_match?: string }): Promise<unknown>;
   delete(args: { key: string }): Promise<unknown>;
+  list(args: { prefix?: string; cursor?: string; limit?: number }): Promise<{
+    items: Array<{ key: string }>;
+    next_cursor?: string | null;
+  }>;
 }
 
 export interface AnnaRuntime {
@@ -47,7 +51,9 @@ export async function connectAnnaRuntime(): Promise<AnnaRuntime> {
   const runtime = await imported.AnnaAppRuntime.connect();
   if (!runtime?.llm || typeof runtime.llm.complete !== 'function'
     || !runtime.storage || typeof runtime.storage.get !== 'function'
-    || typeof runtime.storage.set !== 'function') {
+    || typeof runtime.storage.set !== 'function'
+    || typeof runtime.storage.delete !== 'function'
+    || typeof runtime.storage.list !== 'function') {
     throw new Error('Required Anna LLM or storage permissions were not granted');
   }
   return runtime;

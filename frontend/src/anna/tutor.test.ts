@@ -16,7 +16,7 @@ function fakeRuntime() {
   const runtime = {
     llm: { complete },
     storage: {
-      get: vi.fn(), set: vi.fn(), delete: vi.fn(),
+      get: vi.fn(), set: vi.fn(), delete: vi.fn(), list: vi.fn(),
     },
   } as unknown as AnnaRuntime;
   return { runtime, complete };

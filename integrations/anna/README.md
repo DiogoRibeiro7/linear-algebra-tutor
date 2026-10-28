@@ -22,6 +22,8 @@ Anna Persistent Storage (APS).
   subspaces, linear transformations, determinants, eigenvalues, and
   orthogonality/least squares, including worked examples and practice prompts.
 - Per-user conversations stored through Anna's app-scoped storage API.
+- Recovery of unindexed conversations and stale deleted-chat entries after
+  interrupted multi-step storage writes.
 - Model calls billed against the Anna user's configured model and quota.
 - Recovery of unanswered student questions after an interrupted model call,
   including after closing and reopening the tutoring window, with the option
@@ -161,8 +163,17 @@ and [App UI Host API](https://anna.partners/developers/apps/app-ui-host-api).
 - Never upload real student records, credentials, private course documents,
   or institutional personal data into the static bundle.
 - The index stores conversation metadata separately from each conversation.
-  Anna's storage access is expected to remain user-scoped; verify this in
-  production with two distinct accounts.
+  On startup, the tutor reconciles its index against all pages of APS keys
+  under `linear-algebra-tutor/v1/conversations/`. This recovers a conversation
+  that was saved before its index write failed, and removes a stale index
+  entry after deletion by confirming that the conversation record is absent.
+  The scan is limited to this app's own prefix and does not retrieve unrelated
+  APS keys. Index writes use Anna's `if_match` ETag when available, with bounded
+  retries on version conflicts; absent ETags cannot provide the same guarantee.
+  These two writes are still not a transaction, and an interrupted update to
+  the title of an already-indexed conversation may retain its old index title
+  until a later successful write. Anna's storage access is expected to remain
+  user-scoped; verify this in production with two distinct accounts.
 
 The Anna integration is non-exclusive and does not replace the standalone
 application's backend, database, authentication, or model configuration.

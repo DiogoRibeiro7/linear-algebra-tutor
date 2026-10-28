@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { isTutorConversation } from './models';
+import { isTutorConversation, type TutorConversation } from './models';
 
 const fake = vi.hoisted(() => ({
   stored: new Map<string, unknown>(),
@@ -18,6 +18,17 @@ vi.mock('./runtime', () => ({
       },
       delete: async ({ key }: { key: string }) => {
         fake.stored.delete(key);
+      },
+      list: async ({ prefix = '', cursor, limit = 100 }: {
+        prefix?: string; cursor?: string; limit?: number;
+      }) => {
+        const keys = [...fake.stored.keys()].filter((key) => key.startsWith(prefix)).sort();
+        const offset = Number(cursor ?? 0);
+        const page = keys.slice(offset, offset + limit);
+        return {
+          items: page.map((key) => ({ key })),
+          next_cursor: offset + limit < keys.length ? String(offset + limit) : null,
+        };
       },
     },
   })),
@@ -78,6 +89,34 @@ describe('Anna tutoring window', () => {
     await user.click(await screen.findByRole('button', { name: 'Start learning' }));
     await user.selectOptions(screen.getByLabelText('Hints'), 'low');
     expect(screen.getByLabelText('Hints')).toHaveValue('low');
+  });
+
+  it('recovers a previously saved chat that was missing from the index', async () => {
+    const recovered: TutorConversation = {
+      id: 'orphan', title: 'Recovered lesson',
+      created_at: '2026-10-28T12:00:00Z',
+      updated_at: '2026-10-28T12:00:00Z',
+      hint_level: 'medium', topic: 'vectors', messages: [],
+    };
+    fake.stored.set('linear-algebra-tutor/v1/conversations/orphan', recovered);
+
+    render(<AnnaApp />);
+    expect(await screen.findByRole('heading', { name: 'Recovered lesson' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Recovered lesson' })).toHaveAttribute('aria-current', 'page');
+    expect(fake.stored.get('linear-algebra-tutor/v1/index')).toEqual([{
+      id: 'orphan', title: 'Recovered lesson', updated_at: recovered.updated_at,
+    }]);
+  });
+
+  it('removes a missing conversation from the index before choosing the active chat', async () => {
+    fake.stored.set('linear-algebra-tutor/v1/index', [{
+      id: 'deleted', title: 'Deleted lesson', updated_at: '2026-10-28T12:00:00Z',
+    }]);
+
+    render(<AnnaApp />);
+    expect(await screen.findByRole('button', { name: 'Start learning' })).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Deleted lesson' })).not.toBeInTheDocument();
+    expect(fake.stored.get('linear-algebra-tutor/v1/index')).toEqual([]);
   });
 
   it('opens and dismisses the compact-window conversation drawer with keyboard support', async () => {
