@@ -38,11 +38,13 @@ export function AnnaApp() {
   const [summaries, setSummaries] = useState<ConversationSummary[]>([]);
   const [active, setActive] = useState<TutorConversation | null>(null);
   const [input, setInput] = useState('');
+  const [editingPending, setEditingPending] = useState(false);
   const [busy, setBusy] = useState(false);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [navigationOpen, setNavigationOpen] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const questionInputRef = useRef<HTMLInputElement>(null);
   const menuButtonRef = useRef<HTMLButtonElement>(null);
   const closeNavigationButtonRef = useRef<HTMLButtonElement>(null);
 
@@ -80,6 +82,10 @@ export function AnnaApp() {
   }, [active?.messages]);
 
   useEffect(() => {
+    if (editingPending) questionInputRef.current?.focus();
+  }, [editingPending]);
+
+  useEffect(() => {
     if (!navigationOpen) return;
 
     // Keep the mobile drawer keyboard-accessible and return focus on Escape.
@@ -108,6 +114,11 @@ export function AnnaApp() {
     menuButtonRef.current?.focus();
   }
 
+  function resetDraft(): void {
+    setInput('');
+    setEditingPending(false);
+  }
+
   async function persist(conversation: TutorConversation): Promise<void> {
     if (!store) throw new Error('Storage is unavailable');
     const nextSummaries = await store.saveConversation(conversation);
@@ -120,6 +131,7 @@ export function AnnaApp() {
     setError(null);
     try {
       await persist(newConversation());
+      resetDraft();
       closeNavigation();
     } catch (failure: unknown) {
       setError(failure instanceof Error ? failure.message : 'Unable to create conversation');
@@ -133,6 +145,7 @@ export function AnnaApp() {
       const conversation = await store.getConversation(id);
       if (conversation) {
         setActive(conversation);
+        resetDraft();
         closeNavigation();
       }
     } catch (failure: unknown) {
@@ -160,6 +173,7 @@ export function AnnaApp() {
         ? await store.getConversation(nextSummaries[0].id) : null;
       setSummaries(nextSummaries);
       setActive(next);
+      resetDraft();
     } catch (failure: unknown) {
       setError(failure instanceof Error ? failure.message : 'Unable to delete conversation');
     } finally {
@@ -195,7 +209,7 @@ export function AnnaApp() {
 
   /** Recover an interrupted model turn, including after reopening the Anna window. */
   async function retryLastAnswer(): Promise<void> {
-    if (!active || !store || !tutor || busy || !hasUnansweredQuestion) return;
+    if (!active || !store || !tutor || busy || !hasUnansweredQuestion || editingPending) return;
     setBusy(true);
     setError(null);
     try {
@@ -207,23 +221,47 @@ export function AnnaApp() {
     }
   }
 
+  /** Keep the saved pending turn intact until the student submits a revision. */
+  function startEditingPending(): void {
+    if (!hasUnansweredQuestion || !lastMessage || busy) return;
+    setInput(lastMessage.content);
+    setEditingPending(true);
+  }
+
+  function cancelEditingPending(): void {
+    setEditingPending(false);
+    setInput('');
+  }
+
   async function sendMessage(event: FormEvent<HTMLFormElement>): Promise<void> {
     event.preventDefault();
     if (!active || !tutor || !store || busy || !input.trim()) return;
+    // A failed model call leaves a saved user turn. Never append a second one
+    // until that turn has been answered or deliberately revised.
+    if (hasUnansweredQuestion && !editingPending) return;
+    if (editingPending && (!hasUnansweredQuestion || !lastMessage)) return;
     setBusy(true);
     setError(null);
     const question = input.trim();
-    const userMessage = makeMessage('user', question);
+    const revising = hasUnansweredQuestion && editingPending && lastMessage;
+    const userMessage = revising
+      ? { ...lastMessage, content: question }
+      : makeMessage('user', question);
     try {
-      // First persist the question; keep it available if generation fails.
+      // Persist the revised turn in place before invoking the model. A failed
+      // model call still leaves exactly one recoverable unanswered question.
+      const messages = revising
+        ? [...active.messages.slice(0, -1), userMessage]
+        : [...active.messages, userMessage];
       const withQuestion: TutorConversation = {
         ...active,
-        title: active.messages.length === 0 ? question.slice(0, 60) : active.title,
+        title: messages.length === 1 ? question.slice(0, 60) : active.title,
         updated_at: new Date().toISOString(),
-        messages: [...active.messages, userMessage],
+        messages,
       };
       await persist(withQuestion);
       setInput('');
+      setEditingPending(false);
 
       await answerUnansweredQuestion(withQuestion);
     } catch (failure: unknown) {
@@ -336,11 +374,28 @@ export function AnnaApp() {
               sourceEvidence={sourceEvidence} />)}
             {hasUnansweredQuestion && !busy && <div className="my-4 rounded border border-amber-200 bg-amber-50 p-3 text-sm">
               <p className="text-amber-900">This question has not received a tutor answer.</p>
-              <button type="button" onClick={() => void retryLastAnswer()}
-                className="mt-2 rounded bg-primary-500 px-3 py-2 text-white hover:bg-primary-600">
-                Retry answer
-              </button>
-              <p className="mt-2 text-xs text-amber-800">Retrying may use another Anna model call.</p>
+              {editingPending ? <>
+                <p className="mt-1 text-amber-900">
+                  Edit the pending question below, then send it to replace the saved version.
+                </p>
+                <button type="button" onClick={cancelEditingPending}
+                  className="mt-2 rounded border border-amber-400 px-3 py-2 text-amber-900 hover:bg-amber-100">
+                  Cancel edit
+                </button>
+              </> : <>
+                <p className="mt-1 text-amber-900">Resolve this turn before asking another question.</p>
+                <div className="mt-2 flex flex-wrap gap-2">
+                  <button type="button" onClick={() => void retryLastAnswer()}
+                    className="rounded bg-primary-500 px-3 py-2 text-white hover:bg-primary-600">
+                    Retry answer
+                  </button>
+                  <button type="button" onClick={startEditingPending}
+                    className="rounded border border-amber-400 px-3 py-2 text-amber-900 hover:bg-amber-100">
+                    Edit question
+                  </button>
+                </div>
+                <p className="mt-2 text-xs text-amber-800">Retrying may use another Anna model call.</p>
+              </>}
             </div>}
             {busy && <p role="status" className="text-sm text-gray-500">Working on your question…</p>}
             <div ref={messagesEndRef} />
@@ -350,14 +405,15 @@ export function AnnaApp() {
         {error && <div role="alert" className="border-t bg-red-50 px-4 py-2 text-sm text-red-700">{error}</div>}
         <form onSubmit={(event) => void sendMessage(event)} className="border-t bg-white p-4">
           <div className="mx-auto flex max-w-4xl gap-2">
-            <input aria-label="Ask a linear algebra question" value={input}
+            <input ref={questionInputRef} aria-label="Ask a linear algebra question" value={input}
               onChange={(event) => setInput(event.target.value)} maxLength={4000}
-              placeholder="Ask a question about linear algebra…"
-              disabled={!active || busy}
+              placeholder={editingPending ? 'Revise the unanswered question…' : 'Ask a question about linear algebra…'}
+              disabled={!active || busy || (hasUnansweredQuestion && !editingPending)}
               className="min-w-0 flex-1 rounded border px-3 py-2 focus:outline-none focus:ring-2 focus:ring-primary-500 disabled:bg-gray-100" />
-            <button type="submit" disabled={!active || busy || !input.trim()}
+            <button type="submit" disabled={!active || busy || !input.trim()
+              || (hasUnansweredQuestion && !editingPending)}
               className="flex items-center gap-2 rounded bg-primary-500 px-4 py-2 text-white disabled:opacity-50">
-              <Send size={17} /> Send
+              <Send size={17} /> {editingPending ? 'Resend' : 'Send'}
             </button>
           </div>
           <p className="mt-2 text-center text-xs text-gray-500">
