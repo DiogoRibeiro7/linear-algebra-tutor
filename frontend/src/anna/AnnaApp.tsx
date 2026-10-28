@@ -78,6 +78,8 @@ export function AnnaApp() {
 
   const topics = useMemo(() => [...new Set(chunks.map((chunk) => chunk.topic))]
     .filter(Boolean).sort(), [chunks]);
+  const lastMessage = active?.messages[active.messages.length - 1];
+  const hasUnansweredQuestion = lastMessage?.role === 'user';
 
   async function persist(conversation: TutorConversation): Promise<void> {
     if (!store) throw new Error('Storage is unavailable');
@@ -134,6 +136,46 @@ export function AnnaApp() {
     }
   }
 
+  /** Complete a persisted user turn without appending that question again. */
+  async function answerUnansweredQuestion(conversation: TutorConversation): Promise<void> {
+    if (!tutor) throw new Error('Tutor is unavailable');
+    const question = conversation.messages[conversation.messages.length - 1];
+    if (!question || question.role !== 'user') {
+      throw new Error('The conversation has no unanswered question');
+    }
+
+    // The current question is already stored, so exclude it from model history.
+    const answer = await tutor.answerQuestion(
+      question.content,
+      conversation.messages.slice(0, -1),
+      conversation.hint_level,
+      conversation.topic,
+    );
+    const assistantMessage = {
+      ...makeMessage('assistant', answer.answer),
+      metadata: { sources: answer.sources },
+    };
+    await persist({
+      ...conversation,
+      updated_at: new Date().toISOString(),
+      messages: [...conversation.messages, assistantMessage],
+    });
+  }
+
+  /** Recover an interrupted model turn, including after reopening the Anna window. */
+  async function retryLastAnswer(): Promise<void> {
+    if (!active || !store || !tutor || busy || !hasUnansweredQuestion) return;
+    setBusy(true);
+    setError(null);
+    try {
+      await answerUnansweredQuestion(active);
+    } catch (failure: unknown) {
+      setError(failure instanceof Error ? failure.message : 'Unable to retry the answer');
+    } finally {
+      setBusy(false);
+    }
+  }
+
   async function sendMessage(event: FormEvent<HTMLFormElement>): Promise<void> {
     event.preventDefault();
     if (!active || !tutor || !store || busy || !input.trim()) return;
@@ -152,18 +194,7 @@ export function AnnaApp() {
       await persist(withQuestion);
       setInput('');
 
-      const answer = await tutor.answerQuestion(
-        question, active.messages, active.hint_level, active.topic,
-      );
-      const assistantMessage = {
-        ...makeMessage('assistant', answer.answer),
-        metadata: { sources: answer.sources },
-      };
-      await persist({
-        ...withQuestion,
-        updated_at: new Date().toISOString(),
-        messages: [...withQuestion.messages, assistantMessage],
-      });
+      await answerUnansweredQuestion(withQuestion);
     } catch (failure: unknown) {
       setError(failure instanceof Error ? failure.message : 'Unable to answer the question');
     } finally {
@@ -253,6 +284,14 @@ export function AnnaApp() {
               Try asking: What does an eigenvector represent geometrically?
             </p>}
             {active.messages.map((message) => <MessageBubble key={message.id} message={message} />)}
+            {hasUnansweredQuestion && !busy && <div className="my-4 rounded border border-amber-200 bg-amber-50 p-3 text-sm">
+              <p className="text-amber-900">This question has not received a tutor answer.</p>
+              <button type="button" onClick={() => void retryLastAnswer()}
+                className="mt-2 rounded bg-primary-500 px-3 py-2 text-white hover:bg-primary-600">
+                Retry answer
+              </button>
+              <p className="mt-2 text-xs text-amber-800">Retrying may use another Anna model call.</p>
+            </div>}
             {busy && <p role="status" className="text-sm text-gray-500">Working on your question…</p>}
             <div ref={messagesEndRef} />
           </div>}

@@ -19,6 +19,8 @@ Anna Persistent Storage (APS).
   orthogonality/least squares, including worked examples and practice prompts.
 - Per-user conversations stored through Anna's app-scoped storage API.
 - Model calls billed against the Anna user's configured model and quota.
+- Recovery of unanswered student questions after an interrupted model call,
+  including after closing and reopening the tutoring window.
 
 The retrieval method is deliberately labeled **BM25 lexical retrieval**, not
 the original MiniLM semantic retrieval. The standalone application's
@@ -94,6 +96,13 @@ chunk limit: split such blocks into smaller complete examples.
 The `hostContract.test.ts` suite uses Anna's official `mountBundle` harness
 to verify manifest permissions, storage calls, Socratic model requests, and
 permission denials. These tests do not need the Python bridge.
+
+If a model request fails after saving the student's question, the conversation
+shows **Retry answer** beside that unanswered turn. The retry sends the existing
+question to the model without adding a duplicate user message. It also works
+after reopening the Anna window because the unanswered question is already in
+app-scoped storage. Each retry may use another model call and consume quota;
+the interface states this before the user clicks it.
 
 For real model calls, activate developer access and follow Anna's
 [`anna-app login` instructions](https://anna.partners/developers/apps/local-dev-llm),
