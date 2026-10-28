@@ -80,6 +80,55 @@ describe('Anna tutoring window', () => {
     expect(screen.getByLabelText('Hints')).toHaveValue('low');
   });
 
+  it('opens and dismisses the compact-window conversation drawer with keyboard support', async () => {
+    const user = userEvent.setup();
+    render(<AnnaApp />);
+
+    const menu = await screen.findByRole('button', { name: 'Open conversations' });
+    const navigation = screen.getByRole('complementary', { name: 'Conversations' });
+    expect(menu).toHaveAttribute('aria-expanded', 'false');
+    expect(menu).toHaveAttribute('aria-controls', 'anna-conversations');
+    expect(navigation).toHaveClass('hidden');
+
+    await user.click(menu);
+    expect(menu).toHaveAttribute('aria-expanded', 'true');
+    expect(navigation).toHaveClass('flex');
+    expect(screen.getByRole('button', { name: 'Close conversations' })).toHaveFocus();
+
+    await user.keyboard('{Escape}');
+    expect(navigation).toHaveClass('hidden');
+    expect(menu).toHaveAttribute('aria-expanded', 'false');
+    expect(menu).toHaveFocus();
+
+    await user.click(menu);
+    await user.click(screen.getByRole('button', { name: 'Close navigation overlay' }));
+    expect(navigation).toHaveClass('hidden');
+    expect(menu).toHaveFocus();
+  });
+
+  it('closes compact navigation after creating or selecting a conversation', async () => {
+    const user = userEvent.setup();
+    render(<AnnaApp />);
+
+    const menu = await screen.findByRole('button', { name: 'Open conversations' });
+    const navigation = screen.getByRole('complementary', { name: 'Conversations' });
+    await user.click(menu);
+    await user.click(screen.getByRole('button', { name: 'Create conversation' }));
+    expect(navigation).toHaveClass('hidden');
+    expect(screen.getByLabelText('Ask a linear algebra question')).toBeEnabled();
+
+    await user.click(menu);
+    await user.click(screen.getByRole('button', { name: 'Create conversation' }));
+    expect(navigation).toHaveClass('hidden');
+    await user.click(menu);
+    const savedChats = screen.getByRole('navigation', { name: 'Saved chats' });
+    const conversations = savedChats.querySelectorAll('button');
+    expect(conversations).toHaveLength(2);
+    await user.click(conversations[1]);
+    expect(navigation).toHaveClass('hidden');
+    expect(menu).toHaveFocus();
+  });
+
   it('retries a failed model call without duplicating the saved student question', async () => {
     const user = userEvent.setup();
     fake.complete.mockRejectedValueOnce(new Error('Anna LLM temporarily unavailable'));

@@ -1,6 +1,6 @@
 /** Standalone Anna-window entrypoint that shares the existing math renderer. */
 import { useEffect, useMemo, useRef, useState, type FormEvent } from 'react';
-import { BookOpen, Loader2, Plus, Send, Trash2 } from 'lucide-react';
+import { BookOpen, Loader2, Menu, Plus, Send, Trash2, X } from 'lucide-react';
 import { MessageBubble } from '@/components/MessageBubble';
 import {
   type ConversationSummary,
@@ -41,7 +41,10 @@ export function AnnaApp() {
   const [busy, setBusy] = useState(false);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [navigationOpen, setNavigationOpen] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const menuButtonRef = useRef<HTMLButtonElement>(null);
+  const closeNavigationButtonRef = useRef<HTMLButtonElement>(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -76,6 +79,22 @@ export function AnnaApp() {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [active?.messages]);
 
+  useEffect(() => {
+    if (!navigationOpen) return;
+
+    // Keep the mobile drawer keyboard-accessible and return focus on Escape.
+    closeNavigationButtonRef.current?.focus();
+    function handleKeyDown(event: KeyboardEvent): void {
+      if (event.key === 'Escape') {
+        setNavigationOpen(false);
+        menuButtonRef.current?.focus();
+      }
+    }
+
+    document.addEventListener('keydown', handleKeyDown);
+    return () => document.removeEventListener('keydown', handleKeyDown);
+  }, [navigationOpen]);
+
   const topics = useMemo(() => [...new Set(chunks.map((chunk) => chunk.topic))]
     .filter(Boolean).sort(), [chunks]);
   const sourceEvidence = useMemo(() => new Map(chunks.map(({ id, source, content }) => [
@@ -83,6 +102,11 @@ export function AnnaApp() {
   ] as const)), [chunks]);
   const lastMessage = active?.messages[active.messages.length - 1];
   const hasUnansweredQuestion = lastMessage?.role === 'user';
+
+  function closeNavigation(): void {
+    setNavigationOpen(false);
+    menuButtonRef.current?.focus();
+  }
 
   async function persist(conversation: TutorConversation): Promise<void> {
     if (!store) throw new Error('Storage is unavailable');
@@ -96,6 +120,7 @@ export function AnnaApp() {
     setError(null);
     try {
       await persist(newConversation());
+      closeNavigation();
     } catch (failure: unknown) {
       setError(failure instanceof Error ? failure.message : 'Unable to create conversation');
     }
@@ -106,7 +131,10 @@ export function AnnaApp() {
     setError(null);
     try {
       const conversation = await store.getConversation(id);
-      if (conversation) setActive(conversation);
+      if (conversation) {
+        setActive(conversation);
+        closeNavigation();
+      }
     } catch (failure: unknown) {
       setError(failure instanceof Error ? failure.message : 'Unable to load conversation');
     }
@@ -218,15 +246,27 @@ export function AnnaApp() {
   }
 
   return (
-    <div className="flex h-screen min-h-0 bg-gray-50 text-gray-800">
-      <aside aria-label="Conversations" className="flex w-56 flex-shrink-0 flex-col border-r bg-white sm:w-64">
-        <div className="border-b px-3 py-4">
-          <h1 className="flex items-center gap-2 text-base font-semibold">
-            <BookOpen size={18} /> Linear Algebra Tutor
-          </h1>
-          <p className="mt-1 text-xs text-gray-500">Anna edition · Socratic learning</p>
+    <div className="flex h-screen min-h-0 overflow-hidden bg-gray-50 text-gray-800">
+      {navigationOpen && <button type="button" aria-label="Close navigation overlay"
+        onClick={closeNavigation}
+        className="fixed inset-0 z-20 bg-black/40 md:hidden" />}
+      <aside id="anna-conversations" aria-label="Conversations"
+        className={`${navigationOpen ? 'flex' : 'hidden'} fixed inset-y-0 left-0 z-30 w-72 max-w-[85vw] flex-shrink-0 flex-col border-r bg-white shadow-lg md:static md:z-auto md:flex md:w-64 md:max-w-none md:shadow-none`}>
+        <div className="flex items-start justify-between gap-2 border-b px-3 py-4">
+          <div className="min-w-0">
+            <h1 className="flex items-center gap-2 text-base font-semibold">
+              <BookOpen size={18} /> Linear Algebra Tutor
+            </h1>
+            <p className="mt-1 text-xs text-gray-500">Anna edition · Socratic learning</p>
+          </div>
+          <button type="button" ref={closeNavigationButtonRef} aria-label="Close conversations"
+            onClick={closeNavigation}
+            className="rounded p-1 hover:bg-gray-100 focus-visible:outline focus-visible:outline-2 focus-visible:outline-primary-500 md:hidden">
+            <X size={20} />
+          </button>
         </div>
-        <button type="button" onClick={() => void createConversation()} disabled={busy}
+        <button type="button" aria-label="Create conversation"
+          onClick={() => void createConversation()} disabled={busy}
           className="m-3 flex items-center justify-center gap-2 rounded bg-primary-500 px-3 py-2 text-white disabled:opacity-50">
           <Plus size={16} /> New conversation
         </button>
@@ -247,6 +287,12 @@ export function AnnaApp() {
 
       <main className="flex min-w-0 flex-1 flex-col">
         <div className="flex flex-wrap items-center gap-3 border-b bg-white px-4 py-3">
+          <button type="button" ref={menuButtonRef} aria-label="Open conversations"
+            aria-expanded={navigationOpen} aria-controls="anna-conversations"
+            onClick={() => setNavigationOpen(true)}
+            className="rounded p-1 hover:bg-gray-100 focus-visible:outline focus-visible:outline-2 focus-visible:outline-primary-500 md:hidden">
+            <Menu size={20} />
+          </button>
           <h2 className="mr-auto min-w-0 truncate font-medium">
             {active?.title || 'Select a conversation'}
           </h2>
