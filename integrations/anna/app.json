@@ -1,0 +1,7 @@
+{
+  "name": "Linear Algebra AI Tutor",
+  "slug": "linear-algebra-ai-tutor",
+  "category": "education",
+  "tagline": "Learn linear algebra through guided, source-grounded questions",
+  "description": "An interactive Socratic tutor with mathematical notation, course-material retrieval, adjustable hints, and saved conversations. Built by Diogo Ribeiro."
+}

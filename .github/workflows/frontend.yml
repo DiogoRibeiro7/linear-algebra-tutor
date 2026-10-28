@@ -28,9 +28,7 @@ jobs:
       - name: Set up Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: '20'
-          cache: yarn
-          cache-dependency-path: frontend/yarn.lock
+          node-version: '22'
 
       - name: Enable Corepack
         run: corepack enable
@@ -47,5 +45,11 @@ jobs:
       - name: Tests
         run: yarn test
 
+      - name: Anna material index tests
+        run: yarn test:anna-materials
+
       - name: Build
         run: yarn build
+
+      - name: Build Anna bundle
+        run: yarn build:anna

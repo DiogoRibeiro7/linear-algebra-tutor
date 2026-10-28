@@ -1,12 +1,13 @@
 /**
  * Message bubble component for chat interface
  */
-import { Message } from '@/services/api';
+import type { Message } from '@/services/api';
 import { MathRenderer } from './MathRenderer';
 import { User, Bot } from 'lucide-react';
 
 interface MessageBubbleProps {
-  message: Message;
+  // Both the standalone API and Anna share this display shape.
+  message: Pick<Message, 'role' | 'content' | 'created_at' | 'metadata'>;
 }
 
 export function MessageBubble({ message }: MessageBubbleProps) {

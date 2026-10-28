@@ -7,8 +7,10 @@
   "scripts": {
     "dev": "vite",
     "build": "tsc && vite build",
+    "build:anna": "node ../integrations/anna/scripts/build-materials.mjs && tsc && vite build --config vite.anna.config.ts",
     "lint": "eslint . --ext ts,tsx --report-unused-disable-directives --max-warnings 0",
     "test": "vitest run",
+    "test:anna-materials": "node --test ../integrations/anna/scripts/build-materials.test.mjs",
     "test:watch": "vitest",
     "test:coverage": "vitest run --coverage",
     "preview": "vite preview"
