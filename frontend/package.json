@@ -7,7 +7,10 @@
   "scripts": {
     "dev": "vite",
     "build": "tsc && vite build",
+    "typecheck:tests": "tsc --noEmit --project tsconfig.test.json",
     "build:anna": "node ../integrations/anna/scripts/build-materials.mjs && tsc && vite build --config vite.anna.config.ts",
+    "validate:anna": "anna-app validate --manifest ../integrations/anna/manifest.json --bundle ../integrations/anna/bundle --strict",
+    "smoke:anna": "node ../integrations/anna/scripts/smoke-host.mjs",
     "lint": "eslint . --ext ts,tsx --report-unused-disable-directives --max-warnings 0",
     "test": "vitest run",
     "test:anna-materials": "node --test ../integrations/anna/scripts/build-materials.test.mjs",
@@ -32,6 +35,7 @@
     "zustand": "^4.4.7"
   },
   "devDependencies": {
+    "@anna-ai/cli": "0.1.59",
     "@testing-library/dom": "^10.4.0",
     "@testing-library/jest-dom": "^6.5.0",
     "@testing-library/react": "^16.0.0",

@@ -28,9 +28,10 @@ embedding spaces.
 
 ## Local build and validation
 
-Prerequisites: Node.js 22+, Corepack, Yarn 4, and (for Anna's harness) `uv`
-and the `@anna-ai/cli` package. No Anna credentials are needed for the
-static build and deterministic tests.
+Prerequisites: Node.js 22+, Corepack, Yarn 4, and `uv` for the optional
+Python-based dev server. The versioned Anna CLI is installed with the
+frontend's dev dependencies. No Anna account or credentials are needed
+for static builds, host-contract tests, or mock development.
 
 ```bash
 cd frontend
@@ -38,11 +39,33 @@ corepack yarn install --immutable
 corepack yarn test
 corepack yarn test:anna-materials
 corepack yarn build:anna
-
-cd ../integrations/anna
-anna-app validate --strict
-anna-app dev --llm mock
+corepack yarn validate:anna
 ```
+
+Run the official Anna local host with deterministic tutoring responses:
+
+```bash
+# Terminal 1, in frontend/
+corepack yarn anna-app dev --cwd ../integrations/anna \
+  --manifest manifest.json --bundle bundle \
+  --slug linear-algebra-ai-tutor \
+  --mock-llm ../integrations/anna/fixtures/socratic-replies.jsonl \
+  --no-watch
+```
+
+Then run an HTTP smoke test against the local dashboard in another terminal:
+
+```bash
+# Terminal 2, in frontend/
+corepack yarn smoke:anna
+```
+
+The mock host serves its dashboard at `http://127.0.0.1:5180/`. The smoke
+test creates a disposable session and checks the React entrypoint, course
+index, storage round-trip, mocked LLM answer, and denial of an undeclared
+file capability. It deletes its test record afterward. The mock fixture path
+above is relative to the `frontend/` process directory, as required by the
+pinned CLI version; `--cwd` controls the manifest and bundle paths instead.
 
 `yarn build:anna` regenerates the course index, typechecks the frontend, and
 creates `integrations/anna/bundle/` with `index.html`, JavaScript, CSS,
@@ -53,10 +76,16 @@ code/math blocks, and all LaTeX expressions against the app's KaTeX renderer.
 The indexer rejects a code or display-math block longer than its 900-character
 chunk limit: split such blocks into smaller complete examples.
 
+The `hostContract.test.ts` suite uses Anna's official `mountBundle` harness
+to verify manifest permissions, storage calls, Socratic model requests, and
+permission denials. These tests do not need the Python bridge.
+
 For real model calls, activate developer access and follow Anna's
-[`anna-app login` and `--llm real` instructions](https://anna.partners/developers/apps/local-dev-llm).
-The local mock run verifies interface wiring; it is not proof of successful
-authentication, storage, or model execution on Anna's production host.
+[`anna-app login` instructions](https://anna.partners/developers/apps/local-dev-llm),
+then restart the dev server without `--mock-llm`. Real service calls consume
+quota. The local mock uses in-memory storage: it does not prove production
+authentication, persistent APS behaviour, cross-account isolation, or
+mathematical quality of live model responses.
 
 ## Anna publishing (manual)
 
