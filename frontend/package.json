@@ -7,6 +7,7 @@
   "scripts": {
     "dev": "vite",
     "build": "tsc && vite build",
+    "typecheck:tests": "tsc --noEmit --project tsconfig.test.json",
     "build:anna": "node ../integrations/anna/scripts/build-materials.mjs && tsc && vite build --config vite.anna.config.ts",
     "validate:anna": "anna-app validate --manifest ../integrations/anna/manifest.json --bundle ../integrations/anna/bundle --strict",
     "smoke:anna": "node ../integrations/anna/scripts/smoke-host.mjs",
