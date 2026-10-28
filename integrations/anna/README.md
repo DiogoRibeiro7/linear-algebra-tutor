@@ -12,6 +12,9 @@ Anna Persistent Storage (APS).
 - A Socratic system prompt with minimal, standard, or generous hints.
 - Topic filtering, source attribution, and a deterministic BM25 retrieval
   index built from `data/materials/` (`.md`, `.txt`, and `.py`).
+- Eight original course chapters covering vectors, matrices, systems,
+  subspaces, linear transformations, determinants, eigenvalues, and
+  orthogonality/least squares, including worked examples and practice prompts.
 - Per-user conversations stored through Anna's app-scoped storage API.
 - Model calls billed against the Anna user's configured model and quota.
 
@@ -45,6 +48,10 @@ anna-app dev --llm mock
 creates `integrations/anna/bundle/` with `index.html`, JavaScript, CSS,
 fonts, and `course-materials.json`. Generated files are ignored by Git.
 Only add course content that you have permission to distribute publicly.
+`yarn test:anna-materials` verifies chapter metadata, complete Markdown
+code/math blocks, and all LaTeX expressions against the app's KaTeX renderer.
+The indexer rejects a code or display-math block longer than its 900-character
+chunk limit: split such blocks into smaller complete examples.
 
 For real model calls, activate developer access and follow Anna's
 [`anna-app login` and `--llm real` instructions](https://anna.partners/developers/apps/local-dev-llm).
@@ -71,8 +78,8 @@ and [App UI Host API](https://anna.partners/developers/apps/app-ui-host-api).
 - Users must grant the declared model and storage capabilities.
 - Models may differ from Claude. Regression-test mathematical accuracy,
   source attribution, and Socratic hints before a public release.
-- The current repository contains only the vectors example chapter. Expand
-  the course corpus, with appropriate licensing, before recruiting students.
+- The course corpus is a starting curriculum, not a substitute for academic
+  review, localization, or assessment-specific teaching materials.
 - Never upload real student records, credentials, private course documents,
   or institutional personal data into the static bundle.
 - The index stores conversation metadata separately from each conversation.

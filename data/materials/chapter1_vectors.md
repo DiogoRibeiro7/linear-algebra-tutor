@@ -1,3 +1,8 @@
+---
+topic: vectors
+chapter: 1
+---
+
 # Introduction to Vectors
 
 ## What is a Vector?
@@ -84,9 +89,14 @@ $$|\vec{v}| = \sqrt{v_1^2 + v_2^2}$$
 This is just the Pythagorean theorem!
 
 ### Direction
-The direction of a vector can be described by its angle with the positive x-axis:
+For a nonzero planar vector, its direction can be described by the angle from the
+positive x-axis:
 
-$$\theta = \arctan\left(\frac{v_2}{v_1}\right)$$
+$$\theta = \operatorname{atan2}(v_2,v_1).$$
+
+Using $\operatorname{atan2}$ preserves the quadrant, including when $v_1=0$.
+The zero vector has no defined direction. The simpler expression
+$\arctan(v_2/v_1)$ loses quadrant information and fails for $v_1=0$.
 
 ## Applications
 
@@ -120,4 +130,5 @@ $$\theta = \arctan\left(\frac{v_2}{v_1}\right)$$
 
 3. Calculate the dot product: $\begin{pmatrix} 1 \\ 2 \\ 3 \end{pmatrix} \cdot \begin{pmatrix} 4 \\ 5 \\ 6 \end{pmatrix}$
 
-4. If $\vec{a} \cdot \vec{b} = 0$, what can you conclude about the relationship between the vectors?
+4. If $\vec{a} \cdot \vec{b} = 0$, what can you conclude about orthogonality?
+   Does your statement change when one of the vectors is the zero vector?

@@ -32,7 +32,72 @@ export function parseFrontmatter(text) {
 }
 
 /**
- * Split by paragraphs without silently discarding long paragraphs.
+ * Keep Markdown code fences and display equations intact, including blank
+ * lines inside those blocks. Ordinary paragraphs can still be split.
+ * @param {string} text
+ * @returns {Array<{text: string, protectedBlock: boolean}>}
+ */
+function markdownBlocks(text) {
+  /** @type {Array<{text: string, protectedBlock: boolean}>} */
+  const blocks = [];
+  /** @type {string[]} */
+  let lines = [];
+  /** @type {'paragraph' | 'code' | 'math'} */
+  let kind = 'paragraph';
+
+  const flush = () => {
+    const value = lines.join('\n').trim();
+    if (value) blocks.push({ text: value, protectedBlock: kind !== 'paragraph' });
+    lines = [];
+  };
+
+  for (const line of text.split(/\r?\n/)) {
+    const trimmed = line.trim();
+    if (kind === 'code') {
+      lines.push(line);
+      if (trimmed.startsWith('```')) {
+        flush();
+        kind = 'paragraph';
+      }
+      continue;
+    }
+    if (kind === 'math') {
+      lines.push(line);
+      if ((line.match(/\$\$/g) ?? []).length % 2 === 1) {
+        flush();
+        kind = 'paragraph';
+      }
+      continue;
+    }
+    if (trimmed.startsWith('```')) {
+      flush();
+      kind = 'code';
+      lines.push(line);
+      continue;
+    }
+    if (trimmed.startsWith('$$')) {
+      flush();
+      kind = 'math';
+      lines.push(line);
+      if ((line.match(/\$\$/g) ?? []).length % 2 === 0) {
+        flush();
+        kind = 'paragraph';
+      }
+      continue;
+    }
+    if (!trimmed) {
+      flush();
+    } else {
+      lines.push(line);
+    }
+  }
+  if (kind !== 'paragraph') throw new Error(`Unclosed Markdown ${kind} block`);
+  flush();
+  return blocks;
+}
+
+/**
+ * Split paragraphs without corrupting fenced code or display equations.
  * @param {string} text
  * @param {number} limit
  * @returns {string[]}
@@ -43,14 +108,17 @@ export function splitIntoChunks(text, limit = 900) {
   const chunks = [];
   let current = '';
 
-  /** @param {string} part */
-  const append = (part) => {
+  /** @param {string} part @param {boolean} protectedBlock */
+  const append = (part, protectedBlock) => {
     if (!part) return;
     if (current && current.length + part.length + 2 > limit) {
       chunks.push(current);
       current = '';
     }
     if (part.length > limit) {
+      if (protectedBlock) {
+        throw new RangeError(`Markdown code/math block exceeds ${limit} characters`);
+      }
       if (current) chunks.push(current);
       current = '';
       for (let index = 0; index < part.length; index += limit) {
@@ -62,7 +130,7 @@ export function splitIntoChunks(text, limit = 900) {
     current = current ? `${current}\n\n${part}` : part;
   };
 
-  for (const paragraph of text.split(/\n\s*\n/)) append(paragraph.trim());
+  for (const block of markdownBlocks(text)) append(block.text, block.protectedBlock);
   if (current) chunks.push(current);
   return chunks;
 }
