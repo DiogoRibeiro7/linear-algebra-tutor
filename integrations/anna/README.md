@@ -9,6 +9,8 @@ Anna Persistent Storage (APS).
 ## What works
 
 - React/TypeScript interface with KaTeX mathematical expressions.
+- A compact-window layout that keeps the tutor full-width at Anna's 400px
+  minimum view width, with a keyboard-accessible conversation drawer.
 - A Socratic system prompt with minimal, standard, or generous hints.
 - Topic filtering, source attribution, and a deterministic BM25 retrieval
   index built from `data/materials/` (`.md`, `.txt`, and `.py`).
@@ -107,6 +109,12 @@ chunk limit: split such blocks into smaller complete examples.
 The `hostContract.test.ts` suite uses Anna's official `mountBundle` harness
 to verify manifest permissions, storage calls, Socratic model requests, and
 permission denials. These tests do not need the Python bridge.
+
+At view widths below the `md` breakpoint, the conversation list is collapsed
+behind an **Open conversations** button. It overlays the tutor rather than
+reserving a fixed sidebar width. The drawer closes after opening a saved chat
+or starting a new one, and can also be dismissed with Escape, its close
+button, or the backdrop. At wider widths the sidebar remains visible.
 
 If a model request fails after saving the student's question, the conversation
 shows **Retry answer** beside that unanswered turn. The retry sends the existing
