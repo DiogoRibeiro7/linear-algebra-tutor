@@ -1,18 +1,24 @@
 /** Lightweight retrieval over the material shipped with the Anna bundle. */
 import { isCourseChunk, type CourseChunk } from './models';
+import { canonicalTerm } from './terminology';
 
 const STOP_WORDS = new Set([
   'a', 'an', 'and', 'are', 'as', 'at', 'be', 'can', 'do', 'for', 'from',
   'how', 'i', 'in', 'is', 'it', 'me', 'of', 'on', 'or', 'the', 'to', 'what',
   'when', 'where', 'why', 'with', 'you', 'um', 'uma', 'o', 'os', 'as', 'de',
   'do', 'da', 'dos', 'das', 'em', 'e', 'para', 'por', 'que', 'como', 'se',
+  'qual', 'quais', 'sao', 'com', 'no', 'na', 'nos', 'nas', 'pelo', 'pela',
 ]);
 
 /** Normalize accented English and Portuguese without losing mathematical numbers. */
 export function tokenize(text: string): string[] {
-  const normalized = text.toLowerCase().normalize('NFKD').replace(/[\u0300-\u036f]/g, '');
+  const normalized = text.toLowerCase().normalize('NFKD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .replace(/\bvalores?\s+proprios?\b/g, 'eigenvalue')
+    .replace(/\bvetores?\s+proprios?\b/g, 'eigenvector');
   return (normalized.match(/[\p{L}\p{N}]+/gu) ?? [])
-    .filter((term) => !STOP_WORDS.has(term));
+    .filter((term) => !STOP_WORDS.has(term))
+    .map(canonicalTerm);
 }
 
 export interface RetrievedChunk {
@@ -37,6 +43,13 @@ export function retrieveChunks(
   const documentTerms = selected.map((chunk) => tokenize(chunk.content));
   const averageLength = documentTerms.reduce((sum, words) => sum + words.length, 0)
     / documentTerms.length || 1;
+  const documentFrequencies = new Map<string, number>();
+  for (const words of documentTerms) {
+    // Count each term once per excerpt, as required by the BM25 IDF.
+    for (const term of new Set(words)) {
+      documentFrequencies.set(term, (documentFrequencies.get(term) ?? 0) + 1);
+    }
+  }
   const totalDocuments = selected.length;
   const k1 = 1.5;
   const b = 0.75;
@@ -50,7 +63,7 @@ export function retrieveChunks(
     for (const term of terms) {
       const tf = frequency.get(term) ?? 0;
       if (tf === 0) continue;
-      const documentFrequency = documentTerms.filter((doc) => doc.includes(term)).length;
+      const documentFrequency = documentFrequencies.get(term) ?? 0;
       const idf = Math.log(1 + (totalDocuments - documentFrequency + 0.5)
         / (documentFrequency + 0.5));
       score += idf * tf * (k1 + 1)
