@@ -126,6 +126,7 @@ describe('Anna host contract', () => {
     expect(response.answer).toContain('How would you check');
     expect(response.sources).toEqual([{
       source: 'chapter7_eigenvalues.md', type: 'course_material',
+      chunk_ids: ['chapter7_eigenvalues.md#1'],
     }]);
 
     const request = harness.calls.lastOf('llm.complete')?.args;

@@ -12,6 +12,8 @@ Anna Persistent Storage (APS).
 - A Socratic system prompt with minimal, standard, or generous hints.
 - Topic filtering, source attribution, and a deterministic BM25 retrieval
   index built from `data/materials/` (`.md`, `.txt`, and `.py`).
+- Expandable, mathematically rendered previews of the exact passages supplied
+  to the model, alongside each saved answer.
 - Curated English/Portuguese linear-algebra terminology normalization,
   including accents, common plurals, and phrases such as *valores próprios*.
 - Eight original course chapters covering vectors, matrices, systems,
@@ -83,6 +85,15 @@ fonts, and `course-materials.json`. Generated files are ignored by Git.
 Only add course content that you have permission to distribute publicly.
 `yarn test:anna-materials` verifies chapter metadata, complete Markdown
 code/math blocks, and all LaTeX expressions against the app's KaTeX renderer.
+Each generated passage ID includes a short SHA-256 fingerprint of its text.
+The tutor saves these IDs with an answer and resolves the passages from its
+bundled index; it does not copy entire lesson texts into per-user storage.
+If course material changes, an old reference remains visible by filename but
+its outdated passage preview is marked unavailable, never silently replaced
+with new mathematical text. Older saved conversations without passage IDs
+continue to show their original filenames. The displayed passages are the
+retrieval context given to the model, not proof that the model used every
+passage in composing its reply.
 `yarn test` regenerates the same index and includes an offline retrieval quality
 suite. `yarn test:retrieval` runs that suite independently: eight English and
 eight Portuguese questions, one per chapter in each language, must retrieve

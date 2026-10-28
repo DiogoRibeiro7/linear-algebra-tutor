@@ -57,10 +57,20 @@ export class AnnaTutorService {
       throw new Error('The model response was truncated; please try a smaller question');
     }
 
-    const sources = [...new Map(retrieved.map(({ chunk }) => [chunk.source, {
-      source: chunk.source,
-      type: chunk.type,
-    }])).values()];
+    const bySource = new Map<string, SourceReference>();
+    for (const { chunk } of retrieved) {
+      const prior = bySource.get(chunk.source);
+      if (prior) {
+        prior.chunk_ids?.push(chunk.id);
+      } else {
+        bySource.set(chunk.source, {
+          source: chunk.source,
+          type: chunk.type,
+          chunk_ids: [chunk.id],
+        });
+      }
+    }
+    const sources = [...bySource.values()];
     return { answer: reply.content.text, sources };
   }
 }

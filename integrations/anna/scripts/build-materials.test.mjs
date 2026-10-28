@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import { readFile } from 'node:fs/promises';
+import { createHash } from 'node:crypto';
 import { createRequire } from 'node:module';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -61,6 +62,11 @@ test('the distributable corpus covers the core curriculum with valid source meta
 
   assert.ok(chunks.length >= required.size, 'each chapter should contribute passages');
   assert.equal(new Set(chunks.map(({ id }) => id)).size, chunks.length, 'IDs are unique');
+  assert.ok(chunks.every(({ id, source, content }) => {
+    const fingerprint = createHash('sha256').update(content, 'utf8')
+      .digest('hex').slice(0, 16);
+    return id.startsWith(`${source}#`) && id.endsWith(`@${fingerprint}`);
+  }), 'passage IDs must contain a hash of their exact text');
   assert.ok(chunks.every(({ content }) => content.length > 0 && content.length <= 900));
   assert.ok(chunks.every(({ content }) => !content.startsWith('---')),
     'frontmatter should not appear in retrieved passages');

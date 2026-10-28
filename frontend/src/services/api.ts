@@ -66,7 +66,8 @@ export interface Conversation {
 }
 
 export interface MessageMetadata {
-  sources?: Array<{ source: string; type: string }>;
+  // Anna may add versioned evidence IDs; standalone API responses omit them.
+  sources?: Array<{ source: string; type: string; chunk_ids?: string[] }>;
   [key: string]: unknown;
 }
 
