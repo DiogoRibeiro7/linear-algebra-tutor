@@ -53,3 +53,6 @@ jobs:
 
       - name: Build Anna bundle
         run: yarn build:anna
+
+      - name: Validate Anna manifest and permissions
+        run: yarn validate:anna

@@ -1,0 +1,2 @@
+{"ns":"llm","method":"complete","match":{"contentIncludes":"eigenvector"},"result":{"role":"assistant","content":{"type":"text","text":"Start with Av = λv. How can you check whether your proposed nonzero vector keeps its direction under A?"},"model":"anna-mock","stopReason":"endTurn"}}
+{"ns":"llm","method":"complete","match":{"contentIncludes":"determinant"},"result":{"role":"assistant","content":{"type":"text","text":"What does the determinant tell you about invertibility? Try the 2×2 case before generalizing."},"model":"anna-mock","stopReason":"endTurn"}}
