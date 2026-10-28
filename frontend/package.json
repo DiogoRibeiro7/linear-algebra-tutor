@@ -12,10 +12,11 @@
     "validate:anna": "anna-app validate --manifest ../integrations/anna/manifest.json --bundle ../integrations/anna/bundle --strict",
     "smoke:anna": "node ../integrations/anna/scripts/smoke-host.mjs",
     "lint": "eslint . --ext ts,tsx --report-unused-disable-directives --max-warnings 0",
-    "test": "vitest run",
+    "test": "node ../integrations/anna/scripts/build-materials.mjs && vitest run",
+    "test:retrieval": "node ../integrations/anna/scripts/build-materials.mjs && vitest run src/anna/retrievalQuality.test.ts",
     "test:anna-materials": "node --test ../integrations/anna/scripts/build-materials.test.mjs",
-    "test:watch": "vitest",
-    "test:coverage": "vitest run --coverage",
+    "test:watch": "node ../integrations/anna/scripts/build-materials.mjs && vitest",
+    "test:coverage": "node ../integrations/anna/scripts/build-materials.mjs && vitest run --coverage",
     "preview": "vite preview"
   },
   "dependencies": {
@@ -41,6 +42,7 @@
     "@testing-library/react": "^16.0.0",
     "@testing-library/user-event": "^14.5.0",
     "@types/katex": "^0.16.7",
+    "@types/node": "^22",
     "@types/react": "^18.2.48",
     "@types/react-dom": "^18.2.18",
     "@typescript-eslint/eslint-plugin": "^6.19.0",

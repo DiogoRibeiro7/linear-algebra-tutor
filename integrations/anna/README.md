@@ -12,6 +12,8 @@ Anna Persistent Storage (APS).
 - A Socratic system prompt with minimal, standard, or generous hints.
 - Topic filtering, source attribution, and a deterministic BM25 retrieval
   index built from `data/materials/` (`.md`, `.txt`, and `.py`).
+- Curated English/Portuguese linear-algebra terminology normalization,
+  including accents, common plurals, and phrases such as *valores próprios*.
 - Eight original course chapters covering vectors, matrices, systems,
   subspaces, linear transformations, determinants, eigenvalues, and
   orthogonality/least squares, including worked examples and practice prompts.
@@ -26,6 +28,11 @@ confirm Anna's `llm.embed` input/output contract and model identity, or
 introduce an authenticated external retrieval service. Do not silently mix
 embedding spaces.
 
+The bilingual glossary normalizes equivalent mathematical terms on both the
+question and course-excerpt sides of BM25. It is not a translator and does not
+make the search semantic. Unknown terminology still requires literal overlap;
+we do not issue model calls or external requests during retrieval.
+
 ## Local build and validation
 
 Prerequisites: Node.js 22+, Corepack, Yarn 4, and `uv` for the optional
@@ -37,6 +44,7 @@ for static builds, host-contract tests, or mock development.
 cd frontend
 corepack yarn install --immutable
 corepack yarn test
+corepack yarn test:retrieval
 corepack yarn test:anna-materials
 corepack yarn build:anna
 corepack yarn validate:anna
@@ -73,6 +81,13 @@ fonts, and `course-materials.json`. Generated files are ignored by Git.
 Only add course content that you have permission to distribute publicly.
 `yarn test:anna-materials` verifies chapter metadata, complete Markdown
 code/math blocks, and all LaTeX expressions against the app's KaTeX renderer.
+`yarn test` regenerates the same index and includes an offline retrieval quality
+suite. `yarn test:retrieval` runs that suite independently: eight English and
+eight Portuguese questions, one per chapter in each language, must retrieve
+the correct chapter within the first three excerpts. It also reports recall@1
+and mean reciprocal rank at three, without an Anna account or model calls.
+These are regression metrics on 16 curated questions, not an estimate of
+real-world student-question accuracy or mathematical answer correctness.
 The indexer rejects a code or display-math block longer than its 900-character
 chunk limit: split such blocks into smaller complete examples.
 

@@ -22,6 +22,15 @@ describe('Anna BM25 retrieval', () => {
     expect(tokenize('Qual é a definição de combinação linear?')).toContain('combinacao');
   });
 
+  it('canonicalizes Portuguese and English mathematical vocabulary', () => {
+    expect(tokenize('Como calcular autovalores e autovetores?'))
+      .toEqual(['calculate', 'eigenvalue', 'eigenvector']);
+    expect(tokenize('How are eigenvalues and eigenvectors calculated?'))
+      .toEqual(['eigenvalue', 'eigenvector', 'calculate']);
+    expect(tokenize('valores próprios e vetores próprios'))
+      .toEqual(['eigenvalue', 'eigenvector']);
+  });
+
   it('ranks the matching course chapter first', () => {
     const matches = retrieveChunks('determinant of a matrix', documents);
     expect(matches[0].chunk.source).toBe('matrices.md');
