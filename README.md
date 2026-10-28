@@ -94,15 +94,14 @@ echo "VITE_API_URL=http://localhost:8000/api/v1" > .env
 
 4. **Prepare Course Materials (Important!)**
 ```bash
-# Create materials directory
-mkdir -p data/materials
-
-# Add your Linear Algebra course materials
+# Eight foundational chapters are included in data/materials/.
+# Extend this directory with materials you have rights to distribute.
 # Supported formats: .md, .py, .txt
 # Example structure:
 # data/materials/
 #   chapter1_vectors.md
 #   chapter2_matrices.md
+#   chapter3_linear_systems.md
 #   examples/
 #     vector_operations.py
 ```
