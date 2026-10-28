@@ -78,6 +78,9 @@ export function AnnaApp() {
 
   const topics = useMemo(() => [...new Set(chunks.map((chunk) => chunk.topic))]
     .filter(Boolean).sort(), [chunks]);
+  const sourceEvidence = useMemo(() => new Map(chunks.map(({ id, source, content }) => [
+    id, { source, content },
+  ] as const)), [chunks]);
   const lastMessage = active?.messages[active.messages.length - 1];
   const hasUnansweredQuestion = lastMessage?.role === 'user';
 
@@ -283,7 +286,8 @@ export function AnnaApp() {
             {active.messages.length === 0 && <p className="mt-8 text-center text-sm text-gray-500">
               Try asking: What does an eigenvector represent geometrically?
             </p>}
-            {active.messages.map((message) => <MessageBubble key={message.id} message={message} />)}
+            {active.messages.map((message) => <MessageBubble key={message.id} message={message}
+              sourceEvidence={sourceEvidence} />)}
             {hasUnansweredQuestion && !busy && <div className="my-4 rounded border border-amber-200 bg-amber-50 p-3 text-sm">
               <p className="text-amber-900">This question has not received a tutor answer.</p>
               <button type="button" onClick={() => void retryLastAnswer()}

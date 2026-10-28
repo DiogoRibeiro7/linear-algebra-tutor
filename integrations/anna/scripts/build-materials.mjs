@@ -3,6 +3,7 @@
  * No student information, credentials, or runtime files are included.
  */
 import { readdir, readFile, mkdir, writeFile } from 'node:fs/promises';
+import { createHash } from 'node:crypto';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
@@ -165,8 +166,12 @@ export async function buildMaterials() {
       .replace(/^chapter\d+[_-]?/i, '').replaceAll(/[_-]/g, ' ');
 
     for (const [index, content] of splitIntoChunks(body).entries()) {
+      // Version the passage ID by its exact text: saved evidence must never
+      // resolve silently to different mathematics after a course update.
+      const fingerprint = createHash('sha256').update(content, 'utf8')
+        .digest('hex').slice(0, 16);
       chunks.push({
-        id: `${relative}#${index + 1}`,
+        id: `${relative}#${index + 1}@${fingerprint}`,
         source: relative,
         type: path.extname(filename) === '.py' ? 'code_example' : 'course_material',
         topic,

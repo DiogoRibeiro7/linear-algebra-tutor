@@ -28,7 +28,9 @@ describe('Anna tutoring adapter', () => {
     const tutor = new AnnaTutorService(runtime, chunks);
     const result = await tutor.answerQuestion('What is a vector magnitude?', [], 'low', null);
 
-    expect(result.sources).toEqual([{ source: 'vectors.md', type: 'course_material' }]);
+    expect(result.sources).toEqual([{
+      source: 'vectors.md', type: 'course_material', chunk_ids: ['vectors#1'],
+    }]);
     expect(complete).toHaveBeenCalledTimes(1);
     const request = complete.mock.calls[0][0];
     expect(request.systemPrompt).toContain('Minimal hints');
@@ -42,6 +44,19 @@ describe('Anna tutoring adapter', () => {
       .answerQuestion('photosynthesis', [], 'medium', null);
     expect(result.sources).toEqual([]);
     expect(complete.mock.calls[0][0].messages[0].content).toContain('No relevant');
+  });
+
+  it('retains every retrieved passage ID while grouping references by source file', async () => {
+    const { runtime } = fakeRuntime();
+    const tutor = new AnnaTutorService(runtime, [
+      chunks[0],
+      { ...chunks[0], id: 'vectors#2', content: 'Vector magnitude is also called the norm.' },
+    ]);
+
+    const result = await tutor.answerQuestion('vector magnitude norm', [], 'medium', null);
+    expect(result.sources).toHaveLength(1);
+    expect(result.sources[0].source).toBe('vectors.md');
+    expect(result.sources[0].chunk_ids).toEqual(expect.arrayContaining(['vectors#1', 'vectors#2']));
   });
 
   it('validates question length and refuses truncated model outputs', async () => {

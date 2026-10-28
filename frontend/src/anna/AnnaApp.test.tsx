@@ -61,9 +61,15 @@ describe('Anna tutoring window', () => {
     expect(screen.getAllByText('What is a vector magnitude?')).toHaveLength(3);
     expect(screen.queryByRole('button', { name: 'Retry answer' })).not.toBeInTheDocument();
 
+    await user.click(screen.getByText('Retrieved materials (1)'));
+    await user.click(screen.getByText('View passage 1'));
+    expect(screen.getByText('A vector has magnitude and direction.')).toBeInTheDocument();
+
     window.unmount();
     render(<AnnaApp />);
     expect(await screen.findByText('How would you find the magnitude?')).toBeInTheDocument();
+    await user.click(screen.getByText('Retrieved materials (1)'));
+    expect(screen.getByText('View passage 1')).toBeInTheDocument();
   });
 
   it('changes hint levels without leaving the conversation', async () => {

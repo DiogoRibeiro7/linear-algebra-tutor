@@ -13,6 +13,8 @@ export interface CourseChunk {
 export interface SourceReference {
   source: string;
   type: string;
+  /** Versioned IDs of passages provided as context to the tutor model. */
+  chunk_ids?: string[];
 }
 
 export interface TutorMessage {
@@ -60,7 +62,9 @@ export function isTutorMessage(value: unknown): value is TutorMessage {
   const sourcesValid = !isRecord(metadata) || metadata.sources === undefined
     || (Array.isArray(metadata.sources) && metadata.sources.every((source: unknown) =>
       isRecord(source) && typeof source.source === 'string'
-      && typeof source.type === 'string'));
+      && typeof source.type === 'string'
+      && (source.chunk_ids === undefined || (Array.isArray(source.chunk_ids)
+        && source.chunk_ids.every((id: unknown) => typeof id === 'string')))));
   return typeof value.id === 'string'
     && (value.role === 'user' || value.role === 'assistant')
     && typeof value.content === 'string'

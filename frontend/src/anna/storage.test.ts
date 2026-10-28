@@ -58,5 +58,26 @@ describe('Anna persistent conversations', () => {
         created_at: invalidConversation.created_at, metadata: { sources: 'not-an-array' } }],
     });
     await expect(storage.getConversation('unsafe')).rejects.toThrow('invalid format');
+
+    memory.values.set('linear-algebra-tutor/v1/conversations/unsafe', {
+      ...invalidConversation,
+      messages: [{ id: 'm2', role: 'assistant', content: 'Reply',
+        created_at: invalidConversation.created_at,
+        metadata: { sources: [{ source: 'vectors.md', type: 'course_material', chunk_ids: [42] }] } }],
+    });
+    await expect(storage.getConversation('unsafe')).rejects.toThrow('invalid format');
+  });
+
+  it('loads legacy source references that do not include passage IDs', async () => {
+    const memory = new MemoryStorage();
+    const storage = new AnnaConversationStore(memory);
+    memory.values.set('linear-algebra-tutor/v1/conversations/legacy', {
+      ...conversation('legacy'),
+      messages: [{ id: 'm3', role: 'assistant', content: 'Reply',
+        created_at: '2026-10-27T12:00:00Z',
+        metadata: { sources: [{ source: 'vectors.md', type: 'course_material' }] } }],
+    });
+    expect((await storage.getConversation('legacy'))?.messages[0].metadata?.sources)
+      .toEqual([{ source: 'vectors.md', type: 'course_material' }]);
   });
 });
