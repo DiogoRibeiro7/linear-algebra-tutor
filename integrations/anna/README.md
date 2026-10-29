@@ -96,6 +96,7 @@ corepack yarn test:retrieval
 corepack yarn test:anna-materials
 corepack yarn build:anna
 corepack yarn validate:anna
+corepack yarn preflight:anna
 ```
 
 Run the official Anna local host with deterministic tutoring responses:
@@ -268,6 +269,11 @@ authentication, persistent APS behaviour, cross-account isolation, or
 mathematical quality of live model responses.
 
 ## Anna publishing (manual)
+
+The [release packet](RELEASE.md) provides the Marketplace listing text,
+logo assets, real-account screenshot plan, and a checklist of remaining
+approval gates. The offline preflight verifies the generated bundle and
+listing artifacts, but cannot replace an authenticated Anna test.
 
 1. Read the [Developer Terms](https://anna.partners/developers/reference/developer-terms)
    and confirm IP ownership, student-data handling, and commercial conditions.
