@@ -17,6 +17,9 @@ Anna Persistent Storage (APS).
 - Editable, course-aligned starter questions for new chats. The examples
   change with the selected topic and only populate the composer: choosing one
   does not make an Anna model call or spend tokens.
+- Socratic follow-up suggestions after a completed tutor reply: request another
+  hint, ask why a step is valid, or try a similar exercise. These also fill
+  editable drafts without automatically sending a model request.
 - A Socratic system prompt with minimal, standard, or generous hints.
 - Bounded model context for long conversations: recent complete exchanges are
   prioritized without altering the conversation saved in Anna storage.
@@ -169,6 +172,14 @@ The deletion target is tied to the selected conversation ID; switching to a
 different chat dismisses the pending action. Only **Delete permanently** removes
 the record and updates the chat index. The conversation cannot be recovered
 after the storage delete has completed.
+
+After an answered turn, students may use **Another hint**, **Explain the
+reasoning**, or **Try a similar exercise** to continue working on the same
+problem. Each action fills the composer with a contextual follow-up question;
+the student can revise it or replace it with their own text. These controls
+are hidden while typing, during model calls, and for unanswered turns. Sending
+still uses the ordinary history-bounded tutor request and may consume Anna
+model quota. Selecting a suggestion alone never does.
 
 If a model request fails after saving the student's question, the conversation
 shows **Retry answer** and **Edit question** beside that unanswered turn. The

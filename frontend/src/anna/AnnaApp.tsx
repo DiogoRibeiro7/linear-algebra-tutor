@@ -56,6 +56,27 @@ const TOPIC_STARTERS: Readonly<Record<string, readonly string[]>> = {
   ],
 };
 
+interface FollowUpSuggestion {
+  label: string;
+  question: string;
+}
+
+/** Follow-up drafts deliberately reference the previous solved turn. */
+const FOLLOW_UP_SUGGESTIONS: readonly FollowUpSuggestion[] = [
+  {
+    label: 'Another hint',
+    question: 'Could you give me one more small hint about the previous question without revealing the full solution?',
+  },
+  {
+    label: 'Explain the reasoning',
+    question: 'Can you explain why the previous mathematical step is valid?',
+  },
+  {
+    label: 'Try a similar exercise',
+    question: 'Can you give me a similar exercise to try on my own, without showing its solution?',
+  },
+];
+
 function newConversation(): TutorConversation {
   const now = new Date().toISOString();
   return {
@@ -173,6 +194,12 @@ export function AnnaApp() {
   function resetDraft(): void {
     setInput('');
     setEditingPending(false);
+  }
+
+  /** Suggested questions remain editable and never make a model call on selection. */
+  function fillSuggestedDraft(question: string): void {
+    setInput(question);
+    questionInputRef.current?.focus();
   }
 
   async function persist(conversation: TutorConversation): Promise<void> {
@@ -466,11 +493,7 @@ export function AnnaApp() {
               <div role="group" aria-label="Suggested starting questions"
                 className="mt-4 grid gap-2 sm:grid-cols-2">
                 {starters.map((question) => <button type="button" key={question}
-                  onClick={() => {
-                    // Choosing an example only edits the draft; the student controls model usage.
-                    setInput(question);
-                    questionInputRef.current?.focus();
-                  }}
+                  onClick={() => fillSuggestedDraft(question)}
                   className="rounded border bg-white px-3 py-3 text-left text-sm hover:border-primary-500 hover:bg-primary-50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-primary-500">
                   {question}
                 </button>)}
@@ -481,6 +504,21 @@ export function AnnaApp() {
             </div>}
             {active.messages.map((message) => <MessageBubble key={message.id} message={message}
               sourceEvidence={sourceEvidence} />)}
+            {lastMessage?.role === 'assistant' && !input.trim() && !busy && <div
+              className="my-5 rounded border border-gray-200 bg-white p-3">
+              <p className="text-sm text-gray-700">How would you like to continue?</p>
+              <div role="group" aria-label="Suggested follow-up questions"
+                className="mt-2 flex flex-wrap gap-2">
+                {FOLLOW_UP_SUGGESTIONS.map(({ label, question }) => <button type="button" key={label}
+                  onClick={() => fillSuggestedDraft(question)}
+                  className="rounded border border-primary-200 px-3 py-2 text-left text-sm text-primary-700 hover:bg-primary-50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-primary-500">
+                  {label}
+                </button>)}
+              </div>
+              <p className="mt-2 text-xs text-gray-500">
+                Choosing one only fills the draft. You can edit it before sending.
+              </p>
+            </div>}
             {hasUnansweredQuestion && !busy && <div className="my-4 rounded border border-amber-200 bg-amber-50 p-3 text-sm">
               <p className="text-amber-900">This question has not received a tutor answer.</p>
               {editingPending ? <>
