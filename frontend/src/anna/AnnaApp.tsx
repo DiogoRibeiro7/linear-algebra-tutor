@@ -108,9 +108,12 @@ export function AnnaApp() {
   const [navigationOpen, setNavigationOpen] = useState(false);
   const [deleteTargetId, setDeleteTargetId] = useState<string | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const mainRef = useRef<HTMLElement>(null);
   const questionInputRef = useRef<HTMLTextAreaElement>(null);
   const menuButtonRef = useRef<HTMLButtonElement>(null);
+  const navigationRef = useRef<HTMLElement>(null);
   const closeNavigationButtonRef = useRef<HTMLButtonElement>(null);
+  const restoreMenuFocusRef = useRef(false);
   const deleteButtonRef = useRef<HTMLButtonElement>(null);
   const keepConversationButtonRef = useRef<HTMLButtonElement>(null);
   const activeTitleRef = useRef<HTMLHeadingElement>(null);
@@ -163,17 +166,54 @@ export function AnnaApp() {
   useEffect(() => {
     if (!navigationOpen) return;
 
-    // Keep the mobile drawer keyboard-accessible and return focus on Escape.
+    // Treat the compact drawer as a modal: keyboard focus must not escape to
+    // the tutor controls behind the overlay until navigation closes.
     closeNavigationButtonRef.current?.focus();
     function handleKeyDown(event: KeyboardEvent): void {
       if (event.key === 'Escape') {
+        event.preventDefault();
+        restoreMenuFocusRef.current = true;
         setNavigationOpen(false);
-        menuButtonRef.current?.focus();
+      } else if (event.key === 'Tab') {
+        const drawer = navigationRef.current;
+        if (!drawer) return;
+        const focusable = [...drawer.querySelectorAll<HTMLElement>(
+          'a[href], button:not([disabled]), [tabindex]:not([tabindex="-1"])',
+        )].filter((element) => {
+          const style = window.getComputedStyle(element);
+          return style.display !== 'none' && style.visibility !== 'hidden';
+        });
+        const first = focusable[0];
+        const last = focusable[focusable.length - 1];
+        if (!first || !last) return;
+
+        // Only intercept the boundary: native Tab still moves between the
+        // drawer's controls, including newly loaded saved conversations.
+        if (event.shiftKey && (document.activeElement === first
+          || !drawer.contains(document.activeElement))) {
+          event.preventDefault();
+          last.focus();
+        } else if (!event.shiftKey && (document.activeElement === last
+          || !drawer.contains(document.activeElement))) {
+          event.preventDefault();
+          first.focus();
+        }
       }
     }
 
     document.addEventListener('keydown', handleKeyDown);
     return () => document.removeEventListener('keydown', handleKeyDown);
+  }, [navigationOpen]);
+
+  useEffect(() => {
+    // React 18 does not serialize the boolean `inert` attribute correctly.
+    // Set it on the DOM element so background controls are truly unavailable.
+    mainRef.current?.toggleAttribute('inert', navigationOpen);
+    // Wait until the tutor is no longer inert before returning keyboard focus.
+    if (!navigationOpen && restoreMenuFocusRef.current) {
+      restoreMenuFocusRef.current = false;
+      menuButtonRef.current?.focus();
+    }
   }, [navigationOpen]);
 
   const topics = useMemo(() => [...new Set(chunks.map((chunk) => chunk.topic))]
@@ -187,8 +227,8 @@ export function AnnaApp() {
     : DEFAULT_STARTERS;
 
   function closeNavigation(): void {
+    if (navigationOpen) restoreMenuFocusRef.current = true;
     setNavigationOpen(false);
-    menuButtonRef.current?.focus();
   }
 
   function resetDraft(): void {
@@ -381,8 +421,11 @@ export function AnnaApp() {
     <div className="flex h-screen min-h-0 overflow-hidden bg-gray-50 text-gray-800">
       {navigationOpen && <button type="button" aria-label="Close navigation overlay"
         onClick={closeNavigation}
+        tabIndex={-1}
         className="fixed inset-0 z-20 bg-black/40 md:hidden" />}
-      <aside id="anna-conversations" aria-label="Conversations"
+      <aside id="anna-conversations" ref={navigationRef} aria-label="Conversations"
+        role={navigationOpen ? 'dialog' : 'complementary'}
+        aria-modal={navigationOpen ? 'true' : undefined}
         className={`${navigationOpen ? 'flex' : 'hidden'} fixed inset-y-0 left-0 z-30 w-72 max-w-[85vw] flex-shrink-0 flex-col border-r bg-white shadow-lg md:static md:z-auto md:flex md:w-64 md:max-w-none md:shadow-none`}>
         <div className="flex items-start justify-between gap-2 border-b px-3 py-4">
           <div className="min-w-0">
@@ -417,7 +460,7 @@ export function AnnaApp() {
         </p>
       </aside>
 
-      <main className="flex min-w-0 flex-1 flex-col">
+      <main ref={mainRef} className="flex min-w-0 flex-1 flex-col">
         <div className="flex flex-wrap items-center gap-3 border-b bg-white px-4 py-3">
           <button type="button" ref={menuButtonRef} aria-label="Open conversations"
             aria-expanded={navigationOpen} aria-controls="anna-conversations"
@@ -502,8 +545,11 @@ export function AnnaApp() {
                 Edit the question if needed; nothing is sent until you press Send.
               </p>
             </div>}
-            {active.messages.map((message) => <MessageBubble key={message.id} message={message}
-              sourceEvidence={sourceEvidence} />)}
+            <div role="log" aria-label="Conversation transcript" aria-live="polite"
+              aria-relevant="additions">
+              {active.messages.map((message) => <MessageBubble key={message.id} message={message}
+                sourceEvidence={sourceEvidence} />)}
+            </div>
             {lastMessage?.role === 'assistant' && !input.trim() && !busy && <div
               className="my-5 rounded border border-gray-200 bg-white p-3">
               <p className="text-sm text-gray-700">How would you like to continue?</p>

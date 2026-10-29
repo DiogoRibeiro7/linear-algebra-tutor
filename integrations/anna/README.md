@@ -11,6 +11,8 @@ Anna Persistent Storage (APS).
 - React/TypeScript interface with KaTeX mathematical expressions.
 - A compact-window layout that keeps the tutor full-width at Anna's 400px
   minimum view width, with a keyboard-accessible conversation drawer.
+- A live conversation transcript for assistive technology; new student and
+  tutor messages are announced without interrupting the student.
 - A multiline question composer for matrices, systems of equations, and LaTeX:
   Shift+Enter inserts a line break, Enter submits, and the Send button works
   on touchscreens. The existing 4,000-character question limit is unchanged.
@@ -165,7 +167,12 @@ At view widths below the `md` breakpoint, the conversation list is collapsed
 behind an **Open conversations** button. It overlays the tutor rather than
 reserving a fixed sidebar width. The drawer closes after opening a saved chat
 or starting a new one, and can also be dismissed with Escape, its close
-button, or the backdrop. At wider widths the sidebar remains visible.
+button, or the backdrop. While the compact drawer is open, it is announced as
+a modal dialog, Tab and Shift+Tab stay inside it, and the underlying tutoring
+controls are inert. Focus returns to the menu button once the dialog closes.
+At wider widths the sidebar remains visible. The transcript uses an ARIA log
+so newly appended turns are announced politely; existing stored messages do
+not require a separate model call to be read.
 
 The composer preserves internal newlines in saved questions and model requests,
 including when a student revises an unanswered question. Conversation titles
