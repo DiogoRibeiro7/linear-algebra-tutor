@@ -14,6 +14,48 @@ import { connectAnnaRuntime } from './runtime';
 import { AnnaConversationStore } from './storage';
 import { AnnaTutorService } from './tutor';
 
+/** Curated first questions matched to the eight bundled course chapters. */
+const DEFAULT_STARTERS: readonly string[] = [
+  'What does a vector represent geometrically?',
+  'How can I solve a 2×2 linear system using elimination?',
+  'What makes an eigenvector special?',
+];
+
+const TOPIC_STARTERS: Readonly<Record<string, readonly string[]>> = {
+  vectors: [
+    'How do I calculate the magnitude of the vector (3, 4)?',
+    'Why does the dot product help identify perpendicular vectors?',
+  ],
+  matrices: [
+    'Can you guide me through multiplying two 2×2 matrices?',
+    'How can I determine the rank of a matrix?',
+  ],
+  'linear systems': [
+    'Help me solve x + y = 3 and 2x - y = 0 using elimination.',
+    'How can I tell whether a linear system has infinitely many solutions?',
+  ],
+  'subspaces and bases': [
+    'How can I check whether two vectors form a basis of R²?',
+    'What does the rank-nullity theorem tell us?',
+  ],
+  'linear transformations': [
+    'How can I test whether T(x, y) = (x + y, 2y) is linear?',
+    'How are the kernel and image of a transformation related to its matrix?',
+  ],
+  determinants: [
+    'Why does a zero determinant mean a matrix is not invertible?',
+    'Can you guide me through finding a 3×3 determinant using row operations?',
+  ],
+  'eigenvalues and eigenvectors': [
+    'How can I find the eigenvalues of the matrix [[2, 1], [1, 2]]?',
+    'What does an eigenvector mean geometrically?',
+  ],
+  'orthogonality and least squares': [
+    'How do I project one vector onto another?',
+    'Why can least squares be understood as a projection?',
+  ],
+};
+
 function newConversation(): TutorConversation {
   const now = new Date().toISOString();
   return {
@@ -109,6 +151,8 @@ export function AnnaApp() {
   ] as const)), [chunks]);
   const lastMessage = active?.messages[active.messages.length - 1];
   const hasUnansweredQuestion = lastMessage?.role === 'user';
+  const starters = active?.topic ? TOPIC_STARTERS[active.topic] ?? DEFAULT_STARTERS
+    : DEFAULT_STARTERS;
 
   function closeNavigation(): void {
     setNavigationOpen(false);
@@ -369,9 +413,26 @@ export function AnnaApp() {
             <button type="button" className="mt-5 rounded bg-primary-500 px-4 py-2 text-white"
               onClick={() => void createConversation()}>Start learning</button>
           </div> : <div className="mx-auto max-w-4xl">
-            {active.messages.length === 0 && <p className="mt-8 text-center text-sm text-gray-500">
-              Try asking: What does an eigenvector represent geometrically?
-            </p>}
+            {active.messages.length === 0 && !input.trim() && <div className="mx-auto mt-8 max-w-2xl">
+              <p className="text-center text-sm text-gray-600">
+                Choose a starting question or write your own.
+              </p>
+              <div role="group" aria-label="Suggested starting questions"
+                className="mt-4 grid gap-2 sm:grid-cols-2">
+                {starters.map((question) => <button type="button" key={question}
+                  onClick={() => {
+                    // Choosing an example only edits the draft; the student controls model usage.
+                    setInput(question);
+                    questionInputRef.current?.focus();
+                  }}
+                  className="rounded border bg-white px-3 py-3 text-left text-sm hover:border-primary-500 hover:bg-primary-50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-primary-500">
+                  {question}
+                </button>)}
+              </div>
+              <p className="mt-3 text-center text-xs text-gray-500">
+                Edit the question if needed; nothing is sent until you press Send.
+              </p>
+            </div>}
             {active.messages.map((message) => <MessageBubble key={message.id} message={message}
               sourceEvidence={sourceEvidence} />)}
             {hasUnansweredQuestion && !busy && <div className="my-4 rounded border border-amber-200 bg-amber-50 p-3 text-sm">

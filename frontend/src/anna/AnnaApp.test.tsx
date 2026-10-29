@@ -83,6 +83,59 @@ describe('Anna tutoring window', () => {
     expect(screen.getByText('View passage 1')).toBeInTheDocument();
   });
 
+  it('fills a draft from a starter without calling the model or saving a student turn', async () => {
+    const user = userEvent.setup();
+    render(<AnnaApp />);
+    await user.click(await screen.findByRole('button', { name: 'Start learning' }));
+
+    const suggested = screen.getByRole('group', { name: 'Suggested starting questions' });
+    expect(suggested.querySelectorAll('button')).toHaveLength(3);
+    expect(screen.getByText('Edit the question if needed; nothing is sent until you press Send.'))
+      .toBeInTheDocument();
+    const question = 'How can I solve a 2×2 linear system using elimination?';
+    await user.click(screen.getByRole('button', { name: question }));
+
+    const composer = screen.getByRole('textbox', { name: 'Ask a linear algebra question' });
+    expect(composer).toHaveValue(question);
+    expect(composer).toHaveFocus();
+    expect(screen.queryByRole('group', { name: 'Suggested starting questions' })).not.toBeInTheDocument();
+    expect(fake.complete).not.toHaveBeenCalled();
+    expect([...fake.stored.values()].filter(isTutorConversation)[0].messages).toEqual([]);
+
+    await user.click(screen.getByRole('button', { name: 'Send' }));
+    expect(await screen.findByText('How would you find the magnitude?')).toBeInTheDocument();
+    expect(fake.complete).toHaveBeenCalledOnce();
+    expect(fake.complete.mock.calls[0][0].messages[0].content).toContain(question);
+    expect(screen.queryByRole('group', { name: 'Suggested starting questions' })).not.toBeInTheDocument();
+  });
+
+  it('changes starter questions with the chosen course topic and keeps free-form entry', async () => {
+    const user = userEvent.setup();
+    render(<AnnaApp />);
+    await user.click(await screen.findByRole('button', { name: 'Start learning' }));
+
+    await user.selectOptions(screen.getByLabelText('Topic'), 'vectors');
+    const question = 'Why does the dot product help identify perpendicular vectors?';
+    expect(await screen.findByRole('button', { name: question })).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'What makes an eigenvector special?' }))
+      .not.toBeInTheDocument();
+    expect(fake.complete).not.toHaveBeenCalled();
+
+    await user.click(screen.getByRole('button', { name: question }));
+    const composer = screen.getByRole('textbox', { name: 'Ask a linear algebra question' });
+    await user.clear(composer);
+    expect(screen.getByRole('group', { name: 'Suggested starting questions' })).toBeInTheDocument();
+    await user.type(composer, 'How do I normalize a vector?');
+    expect(screen.queryByRole('group', { name: 'Suggested starting questions' })).not.toBeInTheDocument();
+    expect(fake.complete).not.toHaveBeenCalled();
+
+    await user.click(screen.getByRole('button', { name: 'Send' }));
+    expect(await screen.findByText('How would you find the magnitude?')).toBeInTheDocument();
+    const saved = [...fake.stored.values()].filter(isTutorConversation);
+    expect(saved[0].topic).toBe('vectors');
+    expect(saved[0].messages[0].content).toBe('How do I normalize a vector?');
+  });
+
   it('accepts multiline matrix questions and sends on Enter without losing line breaks', async () => {
     const user = userEvent.setup();
     render(<AnnaApp />);
