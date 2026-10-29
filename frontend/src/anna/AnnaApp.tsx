@@ -57,7 +57,8 @@ export function AnnaApp() {
           loadCourseChunks(),
         ]);
         const nextStore = new AnnaConversationStore(runtime.storage);
-        const nextSummaries = await nextStore.listConversations();
+        // Recover records from interrupted two-step writes before selecting a chat.
+        const nextSummaries = await nextStore.recoverIndex();
         const nextActive = nextSummaries.length
           ? await nextStore.getConversation(nextSummaries[0].id)
           : null;

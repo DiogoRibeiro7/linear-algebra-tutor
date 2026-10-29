@@ -26,6 +26,7 @@ function runtimeFromHarness(harness: MountedHarness): AnnaRuntime {
       get: (args) => harness.runtime.call('storage', 'get', args),
       set: (args) => harness.runtime.call('storage', 'set', args),
       delete: (args) => harness.runtime.call('storage', 'delete', args),
+      list: (args) => harness.runtime.call('storage', 'list', args),
     },
   };
 }
@@ -87,6 +88,17 @@ describe('Anna host contract', () => {
           data.delete(requireKey(args));
           return { deleted: true };
         },
+        'storage.list': (args: unknown) => {
+          if (!isRecord(args) || typeof args.prefix !== 'string') {
+            throw new TypeError('Expected a storage listing prefix');
+          }
+          const prefix = args.prefix;
+          return {
+            items: [...data.keys()].filter((key) => key.startsWith(prefix))
+              .map((key) => ({ key })),
+            next_cursor: null,
+          };
+        },
       },
     });
     const store = new AnnaConversationStore(runtimeFromHarness(harness).storage);
@@ -97,6 +109,8 @@ describe('Anna host contract', () => {
       .toBe('What is an eigenvector?');
     expect((await store.listConversations()).map(({ id }) => id)).toEqual(['lesson-one']);
     expect(harness.calls.byNs('storage.set')).toHaveLength(2);
+    expect((await store.recoverIndex()).map(({ id }) => id)).toEqual(['lesson-one']);
+    expect(harness.calls.lastOf('storage.list')?.outcome).toBe('ok');
 
     await store.deleteConversation('lesson-one');
     expect(await store.getConversation('lesson-one')).toBeNull();

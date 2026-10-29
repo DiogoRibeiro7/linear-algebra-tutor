@@ -83,6 +83,15 @@ async function main() {
     assert.ok(isRecord(read.result) && isRecord(read.result.value));
     assert.equal(read.result.value.lesson, 'eigenvectors');
 
+    // Startup recovery needs APS key listing, not just the indexed KV reads.
+    const listing = await hostCall(base, sessionId, 'storage', 'list', {
+      prefix: 'linear-algebra-tutor/smoke/', limit: 100,
+    });
+    assert.equal(listing.ok, true, 'Anna rejected the granted storage.list');
+    assert.ok(isRecord(listing.result) && Array.isArray(listing.result.items));
+    assert.ok(listing.result.items.some((item) => isRecord(item) && item.key === key),
+      'Anna storage.list did not return the saved smoke-test key');
+
     const completion = await hostCall(base, sessionId, 'llm', 'complete', {
       systemPrompt: 'Guide the student using the Socratic method.',
       messages: [{ role: 'user', content: 'What is an eigenvector?' }],
@@ -99,7 +108,7 @@ async function main() {
     assert.equal(deleted.ok, true, 'Unable to remove smoke-test storage');
   }
 
-  process.stdout.write('Anna mock host smoke passed: bundle, materials, storage, LLM, ACL\n');
+  process.stdout.write('Anna mock host smoke passed: bundle, materials, storage/list, LLM, ACL\n');
 }
 
 await main();
