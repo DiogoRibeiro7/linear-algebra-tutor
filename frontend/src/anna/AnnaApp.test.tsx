@@ -136,6 +136,88 @@ describe('Anna tutoring window', () => {
     expect(saved[0].messages[0].content).toBe('How do I normalize a vector?');
   });
 
+  it('requires confirmation before deleting a chat, with cancellation and Escape support', async () => {
+    const user = userEvent.setup();
+    render(<AnnaApp />);
+    await user.click(await screen.findByRole('button', { name: 'Start learning' }));
+    await user.type(screen.getByRole('textbox', { name: 'Ask a linear algebra question' }),
+      'What is a vector?');
+    await user.click(screen.getByRole('button', { name: 'Send' }));
+    expect(await screen.findByText('How would you find the magnitude?')).toBeInTheDocument();
+
+    const original = [...fake.stored.values()].filter(isTutorConversation)[0];
+    const deleteButton = screen.getByRole('button', { name: 'Delete conversation' });
+    await user.click(deleteButton);
+    expect(deleteButton).toHaveAttribute('aria-expanded', 'true');
+    expect(screen.getByRole('group', { name: 'Confirm conversation deletion' })).toBeInTheDocument();
+    expect(screen.getByText(/This permanently removes the conversation from your Anna account/))
+      .toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Keep conversation' })).toHaveFocus();
+    expect([...fake.stored.values()].filter(isTutorConversation)).toEqual([original]);
+
+    await user.keyboard('{Escape}');
+    expect(screen.queryByRole('group', { name: 'Confirm conversation deletion' })).not.toBeInTheDocument();
+    expect(deleteButton).toHaveFocus();
+    await user.click(deleteButton);
+    await user.click(screen.getByRole('button', { name: 'Keep conversation' }));
+    expect(screen.queryByRole('group', { name: 'Confirm conversation deletion' })).not.toBeInTheDocument();
+    expect([...fake.stored.values()].filter(isTutorConversation)).toEqual([original]);
+    expect(fake.complete).toHaveBeenCalledOnce();
+  });
+
+  it('deletes only the confirmed chat and focuses the remaining conversation', async () => {
+    const user = userEvent.setup();
+    render(<AnnaApp />);
+    await user.click(await screen.findByRole('button', { name: 'Start learning' }));
+    await user.type(screen.getByRole('textbox', { name: 'Ask a linear algebra question' }),
+      'What is a vector?');
+    await user.click(screen.getByRole('button', { name: 'Send' }));
+    expect(await screen.findByText('How would you find the magnitude?')).toBeInTheDocument();
+    const first = [...fake.stored.values()].filter(isTutorConversation)[0];
+
+    await user.click(screen.getByRole('button', { name: 'Create conversation' }));
+    await user.type(screen.getByRole('textbox', { name: 'Ask a linear algebra question' }),
+      'What is a matrix?');
+    await user.click(screen.getByRole('button', { name: 'Send' }));
+    expect(await screen.findAllByText('How would you find the magnitude?')).toHaveLength(1);
+    const second = [...fake.stored.values()].filter(isTutorConversation)
+      .find((conversation) => conversation.id !== first.id);
+    expect(second).toBeDefined();
+
+    await user.click(screen.getByRole('button', { name: 'Delete conversation' }));
+    expect([...fake.stored.values()].filter(isTutorConversation)).toHaveLength(2);
+    await user.click(screen.getByRole('button', { name: 'Delete permanently' }));
+
+    const heading = await screen.findByRole('heading', { name: 'What is a vector?' });
+    expect(heading).toHaveFocus();
+    expect(screen.queryByRole('group', { name: 'Confirm conversation deletion' })).not.toBeInTheDocument();
+    expect([...fake.stored.values()].filter(isTutorConversation)).toEqual([first]);
+    expect(fake.stored.get('linear-algebra-tutor/v1/index')).toEqual([{
+      id: first.id, title: first.title, updated_at: first.updated_at,
+    }]);
+    expect(fake.stored.has(`linear-algebra-tutor/v1/conversations/${second?.id}`)).toBe(false);
+    expect(fake.complete).toHaveBeenCalledTimes(2);
+  });
+
+  it('cancels a pending deletion when a different chat is opened', async () => {
+    const user = userEvent.setup();
+    render(<AnnaApp />);
+    await user.click(await screen.findByRole('button', { name: 'Start learning' }));
+    await user.type(screen.getByRole('textbox', { name: 'Ask a linear algebra question' }),
+      'What is a vector?');
+    await user.click(screen.getByRole('button', { name: 'Send' }));
+    expect(await screen.findByText('How would you find the magnitude?')).toBeInTheDocument();
+    await user.click(screen.getByRole('button', { name: 'Create conversation' }));
+    expect([...fake.stored.values()].filter(isTutorConversation)).toHaveLength(2);
+
+    await user.click(screen.getByRole('button', { name: 'Delete conversation' }));
+    const savedChats = screen.getByRole('navigation', { name: 'Saved chats' });
+    await user.click(savedChats.querySelector('button:last-child') as HTMLButtonElement);
+    expect(await screen.findByRole('heading', { name: 'What is a vector?' })).toBeInTheDocument();
+    expect(screen.queryByRole('group', { name: 'Confirm conversation deletion' })).not.toBeInTheDocument();
+    expect([...fake.stored.values()].filter(isTutorConversation)).toHaveLength(2);
+  });
+
   it('accepts multiline matrix questions and sends on Enter without losing line breaks', async () => {
     const user = userEvent.setup();
     render(<AnnaApp />);

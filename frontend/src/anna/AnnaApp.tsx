@@ -85,10 +85,14 @@ export function AnnaApp() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [navigationOpen, setNavigationOpen] = useState(false);
+  const [deleteTargetId, setDeleteTargetId] = useState<string | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const questionInputRef = useRef<HTMLTextAreaElement>(null);
   const menuButtonRef = useRef<HTMLButtonElement>(null);
   const closeNavigationButtonRef = useRef<HTMLButtonElement>(null);
+  const deleteButtonRef = useRef<HTMLButtonElement>(null);
+  const keepConversationButtonRef = useRef<HTMLButtonElement>(null);
+  const activeTitleRef = useRef<HTMLHeadingElement>(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -127,6 +131,13 @@ export function AnnaApp() {
   useEffect(() => {
     if (editingPending) questionInputRef.current?.focus();
   }, [editingPending]);
+
+  useEffect(() => {
+    // Make the non-destructive action the first keyboard choice.
+    if (deleteTargetId && deleteTargetId === active?.id) {
+      keepConversationButtonRef.current?.focus();
+    }
+  }, [deleteTargetId, active?.id]);
 
   useEffect(() => {
     if (!navigationOpen) return;
@@ -177,6 +188,7 @@ export function AnnaApp() {
     try {
       await persist(newConversation());
       resetDraft();
+      setDeleteTargetId(null);
       closeNavigation();
     } catch (failure: unknown) {
       setError(failure instanceof Error ? failure.message : 'Unable to create conversation');
@@ -191,6 +203,7 @@ export function AnnaApp() {
       if (conversation) {
         setActive(conversation);
         resetDraft();
+        setDeleteTargetId(null);
         closeNavigation();
       }
     } catch (failure: unknown) {
@@ -208,8 +221,14 @@ export function AnnaApp() {
     }
   }
 
+  function cancelConversationDeletion(): void {
+    setDeleteTargetId(null);
+    deleteButtonRef.current?.focus();
+  }
+
+  /** Only a second, explicit action may delete the originally selected chat. */
   async function removeConversation(): Promise<void> {
-    if (!store || !active || busy) return;
+    if (!store || !active || busy || deleteTargetId !== active.id) return;
     setBusy(true);
     setError(null);
     try {
@@ -218,7 +237,9 @@ export function AnnaApp() {
         ? await store.getConversation(nextSummaries[0].id) : null;
       setSummaries(nextSummaries);
       setActive(next);
+      setDeleteTargetId(null);
       resetDraft();
+      activeTitleRef.current?.focus();
     } catch (failure: unknown) {
       setError(failure instanceof Error ? failure.message : 'Unable to delete conversation');
     } finally {
@@ -377,7 +398,7 @@ export function AnnaApp() {
             className="rounded p-1 hover:bg-gray-100 focus-visible:outline focus-visible:outline-2 focus-visible:outline-primary-500 md:hidden">
             <Menu size={20} />
           </button>
-          <h2 className="mr-auto min-w-0 truncate font-medium">
+          <h2 ref={activeTitleRef} tabIndex={-1} className="mr-auto min-w-0 truncate font-medium">
             {active?.title || 'Select a conversation'}
           </h2>
           {active && <>
@@ -396,13 +417,38 @@ export function AnnaApp() {
               <option value="medium">Standard</option>
               <option value="high">Generous</option>
             </select>
-            <button type="button" aria-label="Delete conversation" title="Delete conversation"
-              onClick={() => void removeConversation()} disabled={busy}
+            <button type="button" ref={deleteButtonRef} aria-label="Delete conversation"
+              title="Delete conversation" aria-expanded={deleteTargetId === active.id}
+              aria-controls="anna-delete-confirmation"
+              onClick={() => setDeleteTargetId(active.id)} disabled={busy}
               className="rounded p-1 text-red-600 hover:bg-red-50 disabled:opacity-50">
               <Trash2 size={17} />
             </button>
           </>}
         </div>
+
+        {active && deleteTargetId === active.id && <div id="anna-delete-confirmation"
+          role="group" aria-label="Confirm conversation deletion"
+          onKeyDown={(event) => {
+            if (event.key === 'Escape') {
+              event.preventDefault();
+              cancelConversationDeletion();
+            }
+          }}
+          className="flex flex-wrap items-center gap-3 border-b border-red-200 bg-red-50 px-4 py-3 text-sm">
+          <p role="alert" className="min-w-0 flex-1 text-red-900">
+            Delete “{active.title}”? This permanently removes the conversation from your Anna account.
+          </p>
+          <button type="button" ref={keepConversationButtonRef}
+            onClick={cancelConversationDeletion} disabled={busy}
+            className="rounded border border-gray-300 bg-white px-3 py-2 hover:bg-gray-50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-primary-500">
+            Keep conversation
+          </button>
+          <button type="button" onClick={() => void removeConversation()} disabled={busy}
+            className="rounded bg-red-700 px-3 py-2 text-white hover:bg-red-800 disabled:opacity-50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-red-700">
+            Delete permanently
+          </button>
+        </div>}
 
         <section aria-label="Tutor messages" className="flex-1 overflow-y-auto px-4 py-5">
           {!active ? <div className="mx-auto mt-12 max-w-md text-center">

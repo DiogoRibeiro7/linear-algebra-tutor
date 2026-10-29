@@ -33,6 +33,8 @@ Anna Persistent Storage (APS).
   subspaces, linear transformations, determinants, eigenvalues, and
   orthogonality/least squares, including worked examples and practice prompts.
 - Per-user conversations stored through Anna's app-scoped storage API.
+- An explicit confirmation before permanently deleting a saved conversation,
+  with a keyboard-accessible cancel action and no delete on the first click.
 - Recovery of unindexed conversations and stale deleted-chat entries after
   interrupted multi-step storage writes.
 - Model calls billed against the Anna user's configured model and quota.
@@ -160,6 +162,13 @@ for a selected chapter. The suggestions follow the course topics included in
 the bundle, require no external API or extra storage, and disappear once the
 student starts drafting. Selecting one focuses the composer but never sends
 it automatically; the student may change or clear it before submitting.
+
+The trash button opens an in-window deletion confirmation, initially focusing
+**Keep conversation**. Escape or Keep cancels without touching Anna storage.
+The deletion target is tied to the selected conversation ID; switching to a
+different chat dismisses the pending action. Only **Delete permanently** removes
+the record and updates the chat index. The conversation cannot be recovered
+after the storage delete has completed.
 
 If a model request fails after saving the student's question, the conversation
 shows **Retry answer** and **Edit question** beside that unanswered turn. The
