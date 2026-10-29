@@ -29,6 +29,7 @@ describe('Anna BM25 retrieval', () => {
       .toEqual(['eigenvalue', 'eigenvector', 'calculate']);
     expect(tokenize('valores próprios e vetores próprios'))
       .toEqual(['eigenvalue', 'eigenvector']);
+    expect(tokenize('linearly independent vectors')).toEqual(['linear', 'independence', 'vector']);
   });
 
   it('ranks the matching course chapter first', () => {
@@ -47,5 +48,13 @@ describe('Anna BM25 retrieval', () => {
     expect(retrieveChunks('photosynthesis', documents)).toEqual([]);
     expect(retrieveChunks('the or and', documents)).toEqual([]);
     expect(retrieveChunks('matrix', documents, { topic: 'eigenvalues' })).toEqual([]);
+    expect(retrieveChunks('How can I calculate my taxes?', documents)).toEqual([]);
+    expect(retrieveChunks('Help me solve a customer problem', documents)).toEqual([]);
+  });
+
+  it('allows short mathematical terms but not ambiguous terms in unrelated contexts', () => {
+    expect(retrieveChunks('matrix', documents).length).toBeGreaterThan(0);
+    expect(retrieveChunks('rank football teams', documents)).toEqual([]);
+    expect(retrieveChunks('linear programming', documents)).toEqual([]);
   });
 });

@@ -31,6 +31,20 @@ const cases: readonly RetrievalCase[] = [
   { language: 'pt', question: 'Como usar projeções ortogonais e mínimos quadrados?', expectedSource: 'chapter8_orthogonality_least_squares.md' },
 ];
 
+/** Curated false-attribution checks; these requests share generic course vocabulary. */
+const unrelatedQuestions: readonly { language: 'en' | 'pt'; question: string }[] = [
+  { language: 'en', question: 'How do I calculate my income taxes?' },
+  { language: 'en', question: 'Help me solve a customer service problem.' },
+  { language: 'en', question: 'How do I rank football teams by their goals?' },
+  { language: 'en', question: 'Explain our company business transformation.' },
+  { language: 'en', question: 'How can I install an operating system?' },
+  { language: 'pt', question: 'Como calcular o imposto sobre o rendimento?' },
+  { language: 'pt', question: 'Como resolver um problema com a minha encomenda?' },
+  { language: 'pt', question: 'Como ordenar equipas pelo posto no campeonato?' },
+  { language: 'pt', question: 'Explica a transformação digital de uma empresa.' },
+  { language: 'pt', question: 'Como instalar um sistema operativo no portátil?' },
+];
+
 let chunks: CourseChunk[];
 
 beforeAll(async () => {
@@ -69,5 +83,30 @@ describe('Anna course retrieval quality', () => {
     const first = retrieveChunks(question, chunks, { topK: 3 });
     expect(retrieveChunks(question, chunks, { topK: 3 })).toEqual(first);
     expect(retrieveChunks('photosynthesis in chloroplasts', chunks)).toEqual([]);
+  });
+
+  it.each(unrelatedQuestions)('does not attach course sources to unrelated $language queries', ({ question }) => {
+    expect(retrieveChunks(question, chunks, { topK: 3 })).toEqual([]);
+  });
+
+  it('keeps course evidence for short concept questions and a topic filter', () => {
+    expect(retrieveChunks('What is a matrix?', chunks)[0].chunk.source)
+      .toBe('chapter2_matrices.md');
+    expect(retrieveChunks('Explain the spectral theorem', chunks)
+      .some(({ chunk }) => chunk.source === 'chapter7_eigenvalues.md')).toBe(true);
+    expect(retrieveChunks('Como resolver um sistema de equações?', chunks).length)
+      .toBeGreaterThan(0);
+    expect(retrieveChunks('How do I solve a system?', chunks).length)
+      .toBeGreaterThan(0);
+    expect(retrieveChunks('How do I calculate my taxes?', chunks, { topic: 'vectors' }))
+      .toEqual([]);
+  });
+
+  it('reports false source attribution over the curated bilingual negatives', () => {
+    const falseAttributions = unrelatedQuestions.filter(({ question }) =>
+      retrieveChunks(question, chunks, { topK: 3 }).length > 0).length;
+    const rate = falseAttributions / unrelatedQuestions.length;
+    expect(rate).toBe(0);
+    console.info(`Anna retrieval: curated false attribution=${rate.toFixed(3)}`);
   });
 });

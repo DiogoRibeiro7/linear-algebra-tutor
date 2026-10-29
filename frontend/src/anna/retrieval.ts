@@ -10,6 +10,45 @@ const STOP_WORDS = new Set([
   'qual', 'quais', 'sao', 'com', 'no', 'na', 'nos', 'nas', 'pelo', 'pela',
 ]);
 
+// These verbs and teaching phrases occur throughout the lessons but provide
+// no evidence that the student's actual subject is linear algebra.
+const GENERIC_REQUEST_TERMS = new Set([
+  'calculate', 'solve', 'find', 'explain', 'show', 'help', 'tell', 'please',
+  'understand', 'know', 'mean', 'give', 'use', 'make', 'work', 'working',
+  'example', 'examples', 'problem', 'problems', 'question', 'questions',
+  'answer', 'answers', 'step', 'steps', 'method', 'methods', 'definition',
+  'explicar', 'explica', 'explique', 'ajuda', 'ajudar', 'encontrar',
+  'exemplo', 'exemplos', 'problema', 'problemas', 'pergunta', 'perguntas',
+  'resposta', 'respostas', 'questao', 'questoes', 'passo', 'passos',
+  'metodo', 'metodos', 'entender', 'usar', 'utilizar', 'fazer', 'dizer',
+  'definicao',
+]);
+
+// Curated anchors from the shipped curriculum. Strong terms can identify a
+// subject on their own; contextual terms are ambiguous in everyday requests
+// (e.g. the rank of a sports team or a company's transformation).
+const STRONG_COURSE_TERMS = new Set([
+  'vector', 'matrix', 'scalar', 'basis', 'subspace', 'kernel', 'determinant',
+  'eigenvalue', 'eigenvector', 'orthogonal', 'orthonormal', 'norm', 'span',
+  'transpose', 'gaussian', 'spectral', 'gram', 'schmidt', 'pivot', 'nullity',
+  'nullspace', 'diagonalizable', 'diagonalization', 'inverse', 'svd', 'qr',
+  'ax',
+]);
+
+const CONTEXTUAL_COURSE_TERMS = new Set([
+  'linear', 'system', 'equation', 'rank', 'transformation', 'projection',
+  'least', 'square', 'independence', 'space', 'image', 'product',
+  'addition', 'multiplication', 'inner', 'solution', 'elimination',
+  'geometric', 'geometry', 'dimension', 'column', 'row', 'dot',
+]);
+
+/** Reject incidental keyword matches without claiming semantic classification. */
+function hasCourseAnchor(terms: readonly string[]): boolean {
+  if (terms.some((term) => STRONG_COURSE_TERMS.has(term))) return true;
+  const contextualCount = terms.filter((term) => CONTEXTUAL_COURSE_TERMS.has(term)).length;
+  return contextualCount >= 2 || (contextualCount === 1 && terms.length === 1);
+}
+
 /** Normalize accented English and Portuguese without losing mathematical numbers. */
 export function tokenize(text: string): string[] {
   const normalized = text.toLowerCase().normalize('NFKD')
@@ -32,9 +71,9 @@ export function retrieveChunks(
   allChunks: readonly CourseChunk[],
   options: { topK?: number; topic?: string | null } = {},
 ): RetrievedChunk[] {
-  const terms = [...new Set(tokenize(query))];
+  const terms = [...new Set(tokenize(query).filter((term) => !GENERIC_REQUEST_TERMS.has(term)))];
   const topK = options.topK ?? 3;
-  if (terms.length === 0 || !Number.isInteger(topK) || topK <= 0) return [];
+  if (!hasCourseAnchor(terms) || !Number.isInteger(topK) || topK <= 0) return [];
 
   const selected = allChunks.filter((chunk) => !options.topic
     || chunk.topic.toLocaleLowerCase() === options.topic.toLocaleLowerCase());

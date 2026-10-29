@@ -18,6 +18,9 @@ Anna Persistent Storage (APS).
   to the model, alongside each saved answer.
 - Curated English/Portuguese linear-algebra terminology normalization,
   including accents, common plurals, and phrases such as *valores próprios*.
+- Conservative source-relevance gating: generic requests about unrelated
+  subjects do not receive course citations merely because they share verbs
+  such as *calculate* or *solve* with lesson texts.
 - Eight original course chapters covering vectors, matrices, systems,
   subspaces, linear transformations, determinants, eigenvalues, and
   orthogonality/least squares, including worked examples and practice prompts.
@@ -41,6 +44,15 @@ The bilingual glossary normalizes equivalent mathematical terms on both the
 question and course-excerpt sides of BM25. It is not a translator and does not
 make the search semantic. Unknown terminology still requires literal overlap;
 we do not issue model calls or external requests during retrieval.
+The source-relevance check removes generic instructional terms before BM25
+ranking and requires a recognized linear-algebra concept (or a combination of
+contextual concepts) before attaching passages. Short queries about known
+concepts remain supported. Queries with no qualifying evidence still reach the
+tutor model with an explicit "no relevant course excerpt" notice; they do not
+receive fabricated course references. This is a conservative lexical safeguard,
+not an out-of-domain classifier or proof that cited material is relevant.
+Extend the curated concept vocabulary and its regression cases when the
+course corpus gains subjects or terminology.
 
 ## Local build and validation
 
@@ -102,10 +114,12 @@ passage in composing its reply.
 `yarn test` regenerates the same index and includes an offline retrieval quality
 suite. `yarn test:retrieval` runs that suite independently: eight English and
 eight Portuguese questions, one per chapter in each language, must retrieve
-the correct chapter within the first three excerpts. It also reports recall@1
-and mean reciprocal rank at three, without an Anna account or model calls.
-These are regression metrics on 16 curated questions, not an estimate of
-real-world student-question accuracy or mathematical answer correctness.
+the correct chapter within the first three excerpts. Ten additional bilingual
+negative cases guard against attaching course sources to unrelated questions.
+It reports recall@1, mean reciprocal rank at three, and the false-attribution
+rate on those specific negative cases, without an Anna account or model calls.
+These are regression metrics on curated questions, not estimates of real-world
+student-question accuracy, domain classification, or answer correctness.
 The indexer rejects a code or display-math block longer than its 900-character
 chunk limit: split such blocks into smaller complete examples.
 
