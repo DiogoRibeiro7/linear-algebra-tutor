@@ -178,6 +178,8 @@ describe('Anna tutoring window', () => {
     expect(saved[0].messages.map(({ role }) => role))
       .toEqual(['user', 'assistant', 'user', 'assistant']);
     expect(saved[0].messages[2].content).toBe(revised);
+    expect(saved[0].messages[3].metadata?.sources).toEqual(saved[0].messages[1].metadata?.sources);
+    expect(request.messages[2].content).toContain('Passages from the immediately preceding tutor answer');
   });
 
   it('requires confirmation before deleting a chat, with cancellation and Escape support', async () => {
