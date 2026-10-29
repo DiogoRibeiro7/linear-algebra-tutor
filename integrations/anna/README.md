@@ -14,6 +14,9 @@ Anna Persistent Storage (APS).
 - A multiline question composer for matrices, systems of equations, and LaTeX:
   Shift+Enter inserts a line break, Enter submits, and the Send button works
   on touchscreens. The existing 4,000-character question limit is unchanged.
+- Editable, course-aligned starter questions for new chats. The examples
+  change with the selected topic and only populate the composer: choosing one
+  does not make an Anna model call or spend tokens.
 - A Socratic system prompt with minimal, standard, or generous hints.
 - Bounded model context for long conversations: recent complete exchanges are
   prioritized without altering the conversation saved in Anna storage.
@@ -151,6 +154,12 @@ The composer preserves internal newlines in saved questions and model requests,
 including when a student revises an unanswered question. Conversation titles
 are normalized to a single line so multiline equations do not break the chat
 list. Enter does not submit while an input method editor is composing text.
+
+New chats offer three cross-topic starting questions, or two curated questions
+for a selected chapter. The suggestions follow the course topics included in
+the bundle, require no external API or extra storage, and disappear once the
+student starts drafting. Selecting one focuses the composer but never sends
+it automatically; the student may change or clear it before submitting.
 
 If a model request fails after saving the student's question, the conversation
 shows **Retry answer** and **Edit question** beside that unanswered turn. The
