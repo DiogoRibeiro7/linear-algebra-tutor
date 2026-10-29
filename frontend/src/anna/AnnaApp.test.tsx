@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { render, screen } from '@testing-library/react';
+import { fireEvent, render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { isTutorConversation, type TutorConversation } from './models';
 
@@ -81,6 +81,75 @@ describe('Anna tutoring window', () => {
     expect(await screen.findByText('How would you find the magnitude?')).toBeInTheDocument();
     await user.click(screen.getByText('Retrieved materials (1)'));
     expect(screen.getByText('View passage 1')).toBeInTheDocument();
+  });
+
+  it('accepts multiline matrix questions and sends on Enter without losing line breaks', async () => {
+    const user = userEvent.setup();
+    render(<AnnaApp />);
+    await user.click(await screen.findByRole('button', { name: 'Start learning' }));
+    const composer = screen.getByRole('textbox', { name: 'Ask a linear algebra question' });
+    expect(composer).toHaveAttribute('maxlength', '4000');
+
+    await user.click(composer);
+    await user.type(composer, 'Find the rank of this matrix:');
+    await user.keyboard('{Shift>}{Enter}{/Shift}');
+    await user.type(composer, '1 2');
+    await user.keyboard('{Shift>}{Enter}{/Shift}');
+    await user.type(composer, '3 4');
+    const problem = 'Find the rank of this matrix:\n1 2\n3 4';
+
+    expect(composer).toHaveValue(problem);
+    expect(fake.complete).not.toHaveBeenCalled();
+    expect(screen.getByText('Enter to send · Shift+Enter for a new line. Check mathematical steps independently.'))
+      .toBeInTheDocument();
+
+    await user.keyboard('{Enter}');
+    expect(await screen.findByText('How would you find the magnitude?')).toBeInTheDocument();
+    expect(fake.complete).toHaveBeenCalledOnce();
+    expect(fake.complete.mock.calls[0][0].messages[0].content).toContain(problem);
+
+    const saved = [...fake.stored.values()].filter(isTutorConversation);
+    expect(saved).toHaveLength(1);
+    expect(saved[0].messages[0].content).toBe(problem);
+    expect(saved[0].title).toBe('Find the rank of this matrix: 1 2 3 4');
+  });
+
+  it('keeps an IME composition Enter from submitting a partial equation', async () => {
+    const user = userEvent.setup();
+    render(<AnnaApp />);
+    await user.click(await screen.findByRole('button', { name: 'Start learning' }));
+    const composer = screen.getByRole('textbox', { name: 'Ask a linear algebra question' });
+    await user.type(composer, 'matrix');
+
+    fireEvent.keyDown(composer, { key: 'Enter', code: 'Enter', isComposing: true });
+    expect(fake.complete).not.toHaveBeenCalled();
+    expect(composer).toHaveValue('matrix');
+  });
+
+  it('revises a failed multiline LaTeX question without adding another student turn', async () => {
+    const user = userEvent.setup();
+    fake.complete.mockRejectedValueOnce(new Error('Model unavailable'));
+    render(<AnnaApp />);
+    await user.click(await screen.findByRole('button', { name: 'Start learning' }));
+    const composer = screen.getByRole('textbox', { name: 'Ask a linear algebra question' });
+    const original = 'Compute the determinant:\n$A = \\begin{bmatrix}1 & 2 \\\\ 3 & 4\\end{bmatrix}$';
+    fireEvent.change(composer, { target: { value: original } });
+    await user.click(screen.getByRole('button', { name: 'Send' }));
+    expect(await screen.findByText('Model unavailable')).toBeInTheDocument();
+
+    const first = [...fake.stored.values()].filter(isTutorConversation)[0].messages[0];
+    await user.click(screen.getByRole('button', { name: 'Edit question' }));
+    expect(composer).toHaveValue(original);
+    const revised = original.replace('1 & 2', '2 & 1');
+    fireEvent.change(composer, { target: { value: revised } });
+    await user.click(screen.getByRole('button', { name: 'Resend' }));
+    expect(await screen.findByText('How would you find the magnitude?')).toBeInTheDocument();
+
+    const saved = [...fake.stored.values()].filter(isTutorConversation);
+    expect(saved[0].messages).toHaveLength(2);
+    expect(saved[0].messages[0]).toMatchObject({ id: first.id, content: revised });
+    expect(fake.complete.mock.calls[1][0].messages[0].content).toContain(revised);
+    expect(saved[0].title).not.toContain('\n');
   });
 
   it('changes hint levels without leaving the conversation', async () => {

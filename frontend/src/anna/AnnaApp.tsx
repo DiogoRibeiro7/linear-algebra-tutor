@@ -44,7 +44,7 @@ export function AnnaApp() {
   const [error, setError] = useState<string | null>(null);
   const [navigationOpen, setNavigationOpen] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
-  const questionInputRef = useRef<HTMLInputElement>(null);
+  const questionInputRef = useRef<HTMLTextAreaElement>(null);
   const menuButtonRef = useRef<HTMLButtonElement>(null);
   const closeNavigationButtonRef = useRef<HTMLButtonElement>(null);
 
@@ -256,7 +256,8 @@ export function AnnaApp() {
         : [...active.messages, userMessage];
       const withQuestion: TutorConversation = {
         ...active,
-        title: messages.length === 1 ? question.slice(0, 60) : active.title,
+        // A multiline equation should remain readable in the chat list.
+        title: messages.length === 1 ? question.replace(/\s+/g, ' ').slice(0, 60) : active.title,
         updated_at: new Date().toISOString(),
         messages,
       };
@@ -406,19 +407,29 @@ export function AnnaApp() {
         {error && <div role="alert" className="border-t bg-red-50 px-4 py-2 text-sm text-red-700">{error}</div>}
         <form onSubmit={(event) => void sendMessage(event)} className="border-t bg-white p-4">
           <div className="mx-auto flex max-w-4xl gap-2">
-            <input ref={questionInputRef} aria-label="Ask a linear algebra question" value={input}
+            <textarea ref={questionInputRef} aria-label="Ask a linear algebra question"
+              aria-describedby="anna-compose-help" value={input} rows={2}
               onChange={(event) => setInput(event.target.value)} maxLength={4000}
+              onKeyDown={(event) => {
+                // Shift+Enter inserts a line break for matrices or LaTeX.
+                // IME composition must not accidentally submit a question.
+                if (event.key === 'Enter' && !event.shiftKey && !event.altKey
+                  && !event.ctrlKey && !event.metaKey && !event.nativeEvent.isComposing) {
+                  event.preventDefault();
+                  event.currentTarget.form?.requestSubmit();
+                }
+              }}
               placeholder={editingPending ? 'Revise the unanswered question…' : 'Ask a question about linear algebra…'}
               disabled={!active || busy || (hasUnansweredQuestion && !editingPending)}
-              className="min-w-0 flex-1 rounded border px-3 py-2 focus:outline-none focus:ring-2 focus:ring-primary-500 disabled:bg-gray-100" />
+              className="min-h-14 max-h-36 min-w-0 flex-1 resize-y rounded border px-3 py-2 focus:outline-none focus:ring-2 focus:ring-primary-500 disabled:bg-gray-100" />
             <button type="submit" disabled={!active || busy || !input.trim()
               || (hasUnansweredQuestion && !editingPending)}
               className="flex items-center gap-2 rounded bg-primary-500 px-4 py-2 text-white disabled:opacity-50">
               <Send size={17} /> {editingPending ? 'Resend' : 'Send'}
             </button>
           </div>
-          <p className="mt-2 text-center text-xs text-gray-500">
-            Guided hints, not immediate answers. Check mathematical steps independently.
+          <p id="anna-compose-help" className="mt-2 text-center text-xs text-gray-500">
+            Enter to send · Shift+Enter for a new line. Check mathematical steps independently.
           </p>
         </form>
       </main>
