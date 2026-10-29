@@ -10,6 +10,7 @@
     "typecheck:tests": "tsc --noEmit --project tsconfig.test.json",
     "build:anna": "node ../integrations/anna/scripts/build-materials.mjs && tsc && vite build --config vite.anna.config.ts",
     "validate:anna": "anna-app validate --manifest ../integrations/anna/manifest.json --bundle ../integrations/anna/bundle --strict",
+    "preflight:anna": "node ../integrations/anna/scripts/preflight-release.mjs",
     "smoke:anna": "node ../integrations/anna/scripts/smoke-host.mjs",
     "lint": "eslint . --ext ts,tsx --report-unused-disable-directives --max-warnings 0",
     "test": "node ../integrations/anna/scripts/build-materials.mjs && vitest run",
