@@ -12,6 +12,8 @@ Anna Persistent Storage (APS).
 - A compact-window layout that keeps the tutor full-width at Anna's 400px
   minimum view width, with a keyboard-accessible conversation drawer.
 - A Socratic system prompt with minimal, standard, or generous hints.
+- Bounded model context for long conversations: recent complete exchanges are
+  prioritized without altering the conversation saved in Anna storage.
 - Topic filtering, source attribution, and a deterministic BM25 retrieval
   index built from `data/materials/` (`.md`, `.txt`, and `.py`).
 - Expandable, mathematically rendered previews of the exact passages supplied
@@ -126,6 +128,15 @@ chunk limit: split such blocks into smaller complete examples.
 The `hostContract.test.ts` suite uses Anna's official `mountBundle` harness
 to verify manifest permissions, storage calls, Socratic model requests, and
 permission denials. These tests do not need the Python bridge.
+
+The model receives up to five recent complete question/answer exchanges,
+subject to a 6,000-character history budget. If the newest exchange exceeds
+that budget, the tutor retains the beginning and end of each message with an
+explicit omission marker; older exchanges are omitted whole. The latest
+student question, current source excerpts, and stored transcript are not
+shortened. This is a predictable character limit rather than a tokenizer-
+accurate context guarantee for every model Anna may provide. Students can
+still scroll through the complete saved conversation in the app.
 
 At view widths below the `md` breakpoint, the conversation list is collapsed
 behind an **Open conversations** button. It overlays the tutor rather than

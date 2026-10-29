@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from 'vitest';
-import type { CourseChunk } from './models';
+import type { CourseChunk, TutorMessage } from './models';
 import type { AnnaRuntime } from './runtime';
 import { AnnaTutorService } from './tutor';
 
@@ -20,6 +20,10 @@ function fakeRuntime() {
     },
   } as unknown as AnnaRuntime;
   return { runtime, complete };
+}
+
+function earlierMessage(role: TutorMessage['role'], content: string, id: string): TutorMessage {
+  return { id, role, content, created_at: '2026-10-29T10:00:00Z' };
 }
 
 describe('Anna tutoring adapter', () => {
@@ -78,5 +82,70 @@ describe('Anna tutoring adapter', () => {
 
     complete.mockResolvedValueOnce({ role: 'assistant', content: { type: 'text', text: 'Partial' }, stopReason: 'maxTokens' });
     await expect(tutor.answerQuestion('vector', [], 'medium', null)).rejects.toThrow('truncated');
+  });
+
+  it('sends at most five complete, recent exchanges in chronological order', async () => {
+    const { runtime, complete } = fakeRuntime();
+    const history = Array.from({ length: 6 }, (_, index) => [
+      earlierMessage('user', `Previous student question ${index}`, `q${index}`),
+      earlierMessage('assistant', `Previous tutor answer ${index}`, `a${index}`),
+    ]).flat();
+
+    await new AnnaTutorService(runtime, chunks)
+      .answerQuestion('What is a vector?', history, 'medium', null);
+
+    const messages = complete.mock.calls[0][0].messages;
+    expect(messages).toHaveLength(11);
+    expect(messages.slice(0, -1).map(({ role }: { role: string }) => role))
+      .toEqual(Array.from({ length: 5 }, () => ['user', 'assistant']).flat());
+    expect(messages[0].content).toBe('Previous student question 1');
+    expect(messages[9].content).toBe('Previous tutor answer 5');
+    expect(messages[10].content).toContain('Student question:\nWhat is a vector?');
+  });
+
+  it('bounds oversized earlier turns without changing the active question or saved history', async () => {
+    const { runtime, complete } = fakeRuntime();
+    const history = [
+      earlierMessage('user', 'An older question', 'old-question'),
+      earlierMessage('assistant', 'An older reply', 'old-reply'),
+      earlierMessage('user', 'Q'.repeat(3500), 'recent-question'),
+      earlierMessage('assistant', 'A'.repeat(8000), 'recent-reply'),
+    ];
+    const savedContents = history.map((entry) => entry.content);
+    const currentQuestion = 'vector '.repeat(570).trim();
+
+    await new AnnaTutorService(runtime, chunks)
+      .answerQuestion(currentQuestion, history, 'high', null);
+
+    const messages = complete.mock.calls[0][0].messages;
+    expect(messages).toHaveLength(3);
+    expect(messages.slice(0, 2).map(({ role }: { role: string }) => role))
+      .toEqual(['user', 'assistant']);
+    expect(messages[0].content.length + messages[1].content.length).toBeLessThanOrEqual(6000);
+    expect(messages[0].content).toContain('[Middle of earlier message omitted');
+    expect(messages[1].content).toContain('[Middle of earlier message omitted');
+    expect(messages[0].content).toMatch(/^Q+\n/);
+    expect(messages[1].content).toMatch(/A+$/);
+    expect(messages[2].content).toContain(currentQuestion);
+    expect(messages[2].content).toContain('[Source 1: vectors.md]');
+    expect(history.map((entry) => entry.content)).toEqual(savedContents);
+  });
+
+  it('omits an older complete pair instead of sending an incomplete pair', async () => {
+    const { runtime, complete } = fakeRuntime();
+    const history = Array.from({ length: 4 }, (_, index) => [
+      earlierMessage('user', `Q${index} ${'x'.repeat(1200)}`, `q${index}`),
+      earlierMessage('assistant', `A${index} ${'y'.repeat(1200)}`, `a${index}`),
+    ]).flat();
+
+    await new AnnaTutorService(runtime, chunks)
+      .answerQuestion('vector', history, 'medium', null);
+
+    const messages = complete.mock.calls[0][0].messages;
+    expect(messages).toHaveLength(5); // Two complete exchanges plus this question.
+    expect(messages[0].content).toContain('Q2');
+    expect(messages[1].content).toContain('A2');
+    expect(messages[2].content).toContain('Q3');
+    expect(messages[3].content).toContain('A3');
   });
 });

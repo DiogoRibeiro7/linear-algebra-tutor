@@ -4,6 +4,67 @@ import type { CourseChunk, HintLevel, SourceReference, TutorMessage } from './mo
 import { retrieveChunks } from './retrieval';
 import { systemPromptFor } from './prompts';
 
+// These are character limits, not claims about the host model's tokenizer.
+// Current questions and retrieved excerpts have separate limits and are never
+// shortened by this history budget.
+const MAX_HISTORY_MESSAGES = 10;
+const MAX_HISTORY_CHARS = 6000;
+const OMITTED_MIDDLE = '\n[Middle of earlier message omitted for context length]\n';
+
+type ModelMessage = { role: 'user' | 'assistant'; content: string };
+
+/** Preserve the beginning and end of an oversized prior turn. */
+function shortenEarlierMessage(content: string, maximum: number): string {
+  if (content.length <= maximum) return content;
+  if (maximum <= OMITTED_MIDDLE.length) return content.slice(0, maximum);
+
+  const available = maximum - OMITTED_MIDDLE.length;
+  const head = Math.ceil(available / 2);
+  return content.slice(0, head) + OMITTED_MIDDLE + content.slice(-(available - head));
+}
+
+/**
+ * Select only recent, complete student/assistant exchanges within a fixed
+ * context budget. A long latest exchange is shortened so follow-up questions
+ * still receive some context. Older exchanges remain intact or are excluded.
+ * Saved conversations are not modified.
+ */
+function boundedHistory(history: readonly TutorMessage[]): ModelMessage[] {
+  const selected: ModelMessage[] = [];
+  let remaining = MAX_HISTORY_CHARS;
+
+  for (let index = history.length - 1;
+    index >= 1 && selected.length < MAX_HISTORY_MESSAGES; index -= 2) {
+    const question = history[index - 1];
+    const reply = history[index];
+    if (question.role !== 'user' || reply.role !== 'assistant') break;
+
+    let studentText = question.content;
+    let assistantText = reply.content;
+    if (studentText.length + assistantText.length > remaining) {
+      // Only the newest pair is eligible for shortening. Do not displace it
+      // with older, potentially unrelated history.
+      if (selected.length > 0) break;
+      // Keep the full assistant reply when it is short, while reserving at
+      // least half the budget for each side if both are very long.
+      const studentBudget = Math.min(
+        studentText.length,
+        Math.max(Math.floor(remaining / 2), remaining - assistantText.length),
+      );
+      studentText = shortenEarlierMessage(studentText, studentBudget);
+      assistantText = shortenEarlierMessage(assistantText, remaining - studentBudget);
+    }
+
+    selected.unshift(
+      { role: 'user', content: studentText },
+      { role: 'assistant', content: assistantText },
+    );
+    remaining -= studentText.length + assistantText.length;
+  }
+
+  return selected;
+}
+
 export interface TutoringResponse {
   answer: string;
   sources: SourceReference[];
@@ -33,11 +94,9 @@ export class AnnaTutorService {
       ? `Relevant course excerpts (reference only):\n${excerpts.join('\n\n')}`
       : 'No relevant course-material excerpt was found for this question.';
 
-    // The current question is not yet in history. Avoid duplicate user turns.
-    const messages = history.slice(-10).map((message) => ({
-      role: message.role,
-      content: message.content,
-    }));
+    // The current question is not yet in history. Keep paired recent turns
+    // within budget; the active question and course evidence stay complete.
+    const messages = boundedHistory(history);
     messages.push({
       role: 'user',
       content: `${context}\n\nStudent question:\n${trimmed}`,
