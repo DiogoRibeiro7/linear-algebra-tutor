@@ -46,6 +46,18 @@ describe('Anna tutoring adapter', () => {
     expect(complete.mock.calls[0][0].messages[0].content).toContain('No relevant');
   });
 
+  it('does not cite a course passage matched only by a generic instruction verb', async () => {
+    const { runtime, complete } = fakeRuntime();
+    const tutor = new AnnaTutorService(runtime, [{
+      ...chunks[0], content: 'Calculate a vector magnitude before solving the next problem.',
+    }]);
+
+    const result = await tutor.answerQuestion('How do I calculate income tax?', [], 'medium', null);
+    expect(result.sources).toEqual([]);
+    expect(complete.mock.calls[0][0].messages[0].content)
+      .toContain('No relevant course-material excerpt');
+  });
+
   it('retains every retrieved passage ID while grouping references by source file', async () => {
     const { runtime } = fakeRuntime();
     const tutor = new AnnaTutorService(runtime, [

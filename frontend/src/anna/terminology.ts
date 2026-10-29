@@ -13,7 +13,7 @@ const TERM_GROUPS: readonly (readonly string[])[] = [
   ['product', 'produto'],
   ['scalar', 'escalar', 'escalares'],
   ['system', 'systems', 'sistema', 'sistemas'],
-  ['linear', 'lineares'],
+  ['linear', 'lineares', 'linearly', 'linearmente'],
   ['gaussian', 'gauss'],
   ['elimination', 'eliminacao'],
   ['equation', 'equations', 'equacao', 'equacoes'],
