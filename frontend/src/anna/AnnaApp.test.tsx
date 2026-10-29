@@ -136,6 +136,50 @@ describe('Anna tutoring window', () => {
     expect(saved[0].messages[0].content).toBe('How do I normalize a vector?');
   });
 
+  it('offers editable Socratic follow-ups without making an automatic model call', async () => {
+    const user = userEvent.setup();
+    render(<AnnaApp />);
+    await user.click(await screen.findByRole('button', { name: 'Start learning' }));
+    const composer = screen.getByRole('textbox', { name: 'Ask a linear algebra question' });
+    await user.type(composer, 'What is a vector magnitude?');
+    await user.click(screen.getByRole('button', { name: 'Send' }));
+    expect(await screen.findByText('How would you find the magnitude?')).toBeInTheDocument();
+
+    const suggestions = screen.getByRole('group', { name: 'Suggested follow-up questions' });
+    expect(suggestions.querySelectorAll('button')).toHaveLength(3);
+    expect(screen.getByText('Choosing one only fills the draft. You can edit it before sending.'))
+      .toBeInTheDocument();
+    const previousCallCount = fake.complete.mock.calls.length;
+    await user.click(screen.getByRole('button', { name: 'Explain the reasoning' }));
+    const suggested = 'Can you explain why the previous mathematical step is valid?';
+    expect(composer).toHaveValue(suggested);
+    expect(composer).toHaveFocus();
+    expect(screen.queryByRole('group', { name: 'Suggested follow-up questions' })).not.toBeInTheDocument();
+    expect(fake.complete).toHaveBeenCalledTimes(previousCallCount);
+    expect([...fake.stored.values()].filter(isTutorConversation)[0].messages).toHaveLength(2);
+
+    await user.clear(composer);
+    expect(screen.getByRole('group', { name: 'Suggested follow-up questions' })).toBeInTheDocument();
+    await user.click(screen.getByRole('button', { name: 'Another hint' }));
+    await user.type(composer, ' Please keep it short.');
+    const revised = 'Could you give me one more small hint about the previous question without revealing the full solution? Please keep it short.';
+    expect(composer).toHaveValue(revised);
+    expect(fake.complete).toHaveBeenCalledTimes(previousCallCount);
+
+    await user.click(screen.getByRole('button', { name: 'Send' }));
+    expect(await screen.findAllByText('How would you find the magnitude?')).toHaveLength(2);
+    expect(fake.complete).toHaveBeenCalledTimes(previousCallCount + 1);
+    const request = fake.complete.mock.calls[1][0];
+    expect(request.messages.map(({ role }: { role: string }) => role))
+      .toEqual(['user', 'assistant', 'user']);
+    expect(request.messages[2].content).toContain(revised);
+
+    const saved = [...fake.stored.values()].filter(isTutorConversation);
+    expect(saved[0].messages.map(({ role }) => role))
+      .toEqual(['user', 'assistant', 'user', 'assistant']);
+    expect(saved[0].messages[2].content).toBe(revised);
+  });
+
   it('requires confirmation before deleting a chat, with cancellation and Escape support', async () => {
     const user = userEvent.setup();
     render(<AnnaApp />);
@@ -383,6 +427,7 @@ describe('Anna tutoring window', () => {
     await user.click(screen.getByRole('button', { name: 'Send' }));
 
     expect(await screen.findByText('Anna LLM temporarily unavailable')).toBeInTheDocument();
+    expect(screen.queryByRole('group', { name: 'Suggested follow-up questions' })).not.toBeInTheDocument();
     expect(await screen.findByRole('button', { name: 'Retry answer' })).toBeInTheDocument();
     expect(screen.getByText('Retrying may use another Anna model call.')).toBeInTheDocument();
     expect(screen.getByLabelText('Ask a linear algebra question')).toBeDisabled();
@@ -390,6 +435,7 @@ describe('Anna tutoring window', () => {
 
     await user.click(screen.getByRole('button', { name: 'Retry answer' }));
     expect(await screen.findByText('How would you find the magnitude?')).toBeInTheDocument();
+    expect(screen.getByRole('group', { name: 'Suggested follow-up questions' })).toBeInTheDocument();
     expect(fake.complete).toHaveBeenCalledTimes(2);
     expect(fake.complete.mock.calls[1][0].messages).toHaveLength(1);
     expect(screen.getAllByText('What is a vector magnitude?')).toHaveLength(3);
