@@ -67,6 +67,18 @@ not an out-of-domain classifier or proof that cited material is relevant.
 Extend the curated concept vocabulary and its regression cases when the
 course corpus gains subjects or terminology.
 
+For brief contextual follow-ups such as "Why does that step work?" or the
+suggested next-step prompts, if the new question finds no direct source match,
+the tutor can carry forward up to three exact passages cited in the immediately
+preceding assistant answer. It verifies each saved versioned passage ID, file,
+type, and current topic against the bundled course index; stale references,
+missing metadata, incomplete turns, and changed topics do not cause a new
+citation. A conservative bilingual lexical check refuses carry-over when a
+student introduces unfamiliar subject-specific words (for example, tax or
+photosynthesis). Direct retrieval always takes precedence. This keeps the
+current reference material available to the model without claiming that a
+generic follow-up independently matched those passages.
+
 ## Local build and validation
 
 Prerequisites: Node.js 22+, Corepack, Yarn 4, and `uv` for the optional

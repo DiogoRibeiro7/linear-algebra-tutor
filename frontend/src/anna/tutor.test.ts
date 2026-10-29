@@ -26,6 +26,18 @@ function earlierMessage(role: TutorMessage['role'], content: string, id: string)
   return { id, role, content, created_at: '2026-10-29T10:00:00Z' };
 }
 
+function citedHistory(): TutorMessage[] {
+  return [
+    earlierMessage('user', 'How do I calculate vector magnitude?', 'student1'),
+    {
+      ...earlierMessage('assistant', 'What is the norm of this vector?', 'tutor1'),
+      metadata: { sources: [{
+        source: 'vectors.md', type: 'course_material', chunk_ids: ['vectors#1'],
+      }] },
+    },
+  ];
+}
+
 describe('Anna tutoring adapter', () => {
   it('adds retrieved sources and Socratic instructions to the model request', async () => {
     const { runtime, complete } = fakeRuntime();
@@ -60,6 +72,100 @@ describe('Anna tutoring adapter', () => {
     expect(result.sources).toEqual([]);
     expect(complete.mock.calls[0][0].messages[0].content)
       .toContain('No relevant course-material excerpt');
+  });
+
+  it.each([
+    'Why does that step work?',
+    'Could you give me one more small hint about the previous question without revealing the full solution?',
+    'Can you explain why the previous mathematical step is valid?',
+    'Can you give me a similar exercise to try on my own, without showing its solution?',
+    'Podes explicar esse passo novamente?',
+    'Why?',
+  ])('carries the preceding answer\'s exact evidence for a contextual question: %s', async (followUp) => {
+    const { runtime, complete } = fakeRuntime();
+    const history = citedHistory();
+    const result = await new AnnaTutorService(runtime, chunks)
+      .answerQuestion(followUp, history, 'medium', null);
+
+    expect(result.sources).toEqual([{
+      source: 'vectors.md', type: 'course_material', chunk_ids: ['vectors#1'],
+    }]);
+    const messages = complete.mock.calls[0][0].messages;
+    expect(messages.map(({ role }: { role: string }) => role))
+      .toEqual(['user', 'assistant', 'user']);
+    expect(messages[2].content).toContain('Passages from the immediately preceding tutor answer');
+    expect(messages[2].content).toContain('[Source 1: vectors.md]');
+    expect(messages[2].content).toContain(`Student question:\n${followUp}`);
+    expect(history[1].metadata?.sources?.[0].chunk_ids).toEqual(['vectors#1']);
+    expect(complete).toHaveBeenCalledOnce();
+  });
+
+  it.each([
+    'Can you give me another hint about income tax?',
+    'Why does the previous step work in photosynthesis?',
+    'What is the latest football ranking?',
+  ])('does not carry mathematical evidence to a new subject: %s', async (question) => {
+    const { runtime, complete } = fakeRuntime();
+    const result = await new AnnaTutorService(runtime, chunks)
+      .answerQuestion(question, citedHistory(), 'medium', null);
+    expect(result.sources).toEqual([]);
+    expect(complete.mock.calls[0][0].messages[2].content)
+      .toContain('No relevant course-material excerpt');
+  });
+
+  it('prefers direct retrieval when the student changes to a different math topic', async () => {
+    const { runtime, complete } = fakeRuntime();
+    const matrixChunk: CourseChunk = {
+      id: 'matrices#1', source: 'matrices.md', type: 'course_material',
+      topic: 'matrices', chapter: null, content: 'A matrix represents a linear transformation.',
+    };
+    const result = await new AnnaTutorService(runtime, [...chunks, matrixChunk])
+      .answerQuestion('What is a matrix?', citedHistory(), 'medium', null);
+
+    expect(result.sources).toEqual([{
+      source: 'matrices.md', type: 'course_material', chunk_ids: ['matrices#1'],
+    }]);
+    expect(complete.mock.calls[0][0].messages[2].content)
+      .toContain('Relevant course excerpts (reference only)');
+    expect(complete.mock.calls[0][0].messages[2].content).not.toContain('[Source 1: vectors.md]');
+  });
+
+  it('does not reuse sources from a different topic, missing IDs, or mismatched file metadata', async () => {
+    const { runtime, complete } = fakeRuntime();
+    const tutor = new AnnaTutorService(runtime, chunks);
+    const history = citedHistory();
+    const prompt = 'Can you explain why the previous mathematical step is valid?';
+
+    expect((await tutor.answerQuestion(prompt, history, 'medium', 'matrices')).sources).toEqual([]);
+    history[1].metadata = { sources: [{
+      source: 'vectors.md', type: 'course_material', chunk_ids: ['vectors#outdated'],
+    }] };
+    expect((await tutor.answerQuestion(prompt, history, 'medium', null)).sources).toEqual([]);
+    history[1].metadata = { sources: [{
+      source: 'another-file.md', type: 'course_material', chunk_ids: ['vectors#1'],
+    }] };
+    expect((await tutor.answerQuestion(prompt, history, 'medium', null)).sources).toEqual([]);
+    expect(complete).toHaveBeenCalledTimes(3);
+    for (const call of complete.mock.calls) {
+      expect(call[0].messages[2].content).toContain('No relevant course-material excerpt');
+    }
+  });
+
+  it('does not invent prior evidence from an older answer or an incomplete turn', async () => {
+    const { runtime } = fakeRuntime();
+    const tutor = new AnnaTutorService(runtime, chunks);
+    const previous = citedHistory();
+    const uncited = [
+      ...previous,
+      earlierMessage('user', 'Another problem', 'student2'),
+      earlierMessage('assistant', 'How would you start?', 'tutor2'),
+    ];
+    const prompt = 'Why does that step work?';
+
+    expect((await tutor.answerQuestion(prompt, uncited, 'medium', null)).sources).toEqual([]);
+    expect((await tutor.answerQuestion(prompt, [
+      ...previous, earlierMessage('user', 'Unanswered question', 'pending'),
+    ], 'medium', null)).sources).toEqual([]);
   });
 
   it('retains every retrieved passage ID while grouping references by source file', async () => {
