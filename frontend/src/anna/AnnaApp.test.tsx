@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { fireEvent, render, screen } from '@testing-library/react';
+import { fireEvent, render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { isTutorConversation, type TutorConversation } from './models';
 
@@ -81,6 +81,27 @@ describe('Anna tutoring window', () => {
     expect(await screen.findByText('How would you find the magnitude?')).toBeInTheDocument();
     await user.click(screen.getByText('Retrieved materials (1)'));
     expect(screen.getByText('View passage 1')).toBeInTheDocument();
+  });
+
+  it('announces new student and tutor messages through an accessible conversation log', async () => {
+    const user = userEvent.setup();
+    render(<AnnaApp />);
+    await user.click(await screen.findByRole('button', { name: 'Start learning' }));
+
+    const transcript = screen.getByRole('log', { name: 'Conversation transcript' });
+    expect(transcript).toHaveAttribute('aria-live', 'polite');
+    expect(transcript).toHaveAttribute('aria-relevant', 'additions');
+    expect(transcript).toBeEmptyDOMElement();
+
+    await user.type(screen.getByRole('textbox', { name: 'Ask a linear algebra question' }),
+      'How can I calculate vector magnitude?');
+    await user.click(screen.getByRole('button', { name: 'Send' }));
+
+    expect(await within(transcript).findByText('How would you find the magnitude?'))
+      .toBeInTheDocument();
+    expect(within(transcript).getByText('How can I calculate vector magnitude?'))
+      .toBeInTheDocument();
+    expect(fake.complete).toHaveBeenCalledOnce();
   });
 
   it('fills a draft from a starter without calling the model or saving a student turn', async () => {
@@ -382,10 +403,25 @@ describe('Anna tutoring window', () => {
     await user.click(menu);
     expect(menu).toHaveAttribute('aria-expanded', 'true');
     expect(navigation).toHaveClass('flex');
+    expect(navigation).toHaveAttribute('role', 'dialog');
+    expect(navigation).toHaveAttribute('aria-modal', 'true');
+    expect(document.querySelector('main')).toHaveAttribute('inert');
     expect(screen.getByRole('button', { name: 'Close conversations' })).toHaveFocus();
+
+    // Shift+Tab from the first control wraps to the drawer's last control.
+    await user.tab({ shift: true });
+    expect(screen.getByRole('button', { name: 'Create conversation' })).toHaveFocus();
+    await user.tab();
+    expect(screen.getByRole('button', { name: 'Close conversations' })).toHaveFocus();
+    // Ordinary Tab still advances within the drawer without wrapping early.
+    await user.tab();
+    expect(screen.getByRole('button', { name: 'Create conversation' })).toHaveFocus();
 
     await user.keyboard('{Escape}');
     expect(navigation).toHaveClass('hidden');
+    expect(navigation).toHaveAttribute('role', 'complementary');
+    expect(navigation).not.toHaveAttribute('aria-modal');
+    expect(document.querySelector('main')).not.toHaveAttribute('inert');
     expect(menu).toHaveAttribute('aria-expanded', 'false');
     expect(menu).toHaveFocus();
 
