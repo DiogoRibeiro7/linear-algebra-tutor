@@ -150,6 +150,54 @@ student-question accuracy, domain classification, or answer correctness.
 The indexer rejects a code or display-math block longer than its 900-character
 chunk limit: split such blocks into smaller complete examples.
 
+## Mathematical and Socratic release evaluation
+
+The fixed [evaluation cases](evaluation/cases.json) contain 16 synthetic
+student questions: one English and one European Portuguese problem for each of
+the eight course topics. Each case includes a deliberately plausible error or
+misconception, the correct mathematical result for independent checking, a
+suggested first Socratic step, a hint setting, and its expected source file.
+They cover vector norms, matrix products, linear systems, bases, kernels,
+determinants, eigenvectors, and orthogonality/projection.
+
+`yarn test` validates the case schema and topic coverage, checks that all 16
+questions retrieve their intended chapter within three results (with and
+without the topic filter), and verifies the Socratic prompt and course context
+sent to a mock Anna runtime. These checks are fully offline. **They do not
+score a live model's mathematical correctness or teaching quality.** The
+reference results and teaching goals are guidance for human review, not text
+injected into the model request.
+
+Before submitting the app for review:
+
+1. In an authenticated Anna working draft, record the app commit, model name,
+   date, and relevant model settings. Real model calls consume Anna quota.
+2. Open a fresh conversation for each case. Select its `topic` and `hintLevel`,
+   then send the `question` verbatim. Do not give the model the
+   `referenceCheck` or `socraticGoal` fields.
+3. Compare each answer against the reference and independently check all
+   mathematical steps. Record four separate pass/fail judgments:
+   - Mathematics: no incorrect definition, theorem, computation, or acceptance
+     of the student's false premise.
+   - Socratic method: an appropriate guiding question or manageable next step,
+     without prematurely giving the entire solution at the first turn.
+   - Attribution: no invented lesson/theorem references or misleading use of
+     the retrieved course passages.
+   - Language: the answer uses the student's language; Portuguese answers use
+     European Portuguese.
+4. For each failed judgment, note the exact erroneous passage and retry the
+   scenario after a documented fix. Include a follow-up question for any
+   failure involving context or hint progression.
+
+An example local review table can use the columns
+`id,model,date,math_ok,socratic_ok,attribution_ok,language_ok,notes`.
+Do not commit private student conversations, credentials, or account details.
+For this fixed smoke set, require all 16 cases to pass each criterion before
+claiming readiness for public student use. Report any remaining failures;
+passing retrieval and mock tests alone is insufficient. This curated set is a
+release guardrail, not a statistical estimate of tutoring accuracy across all
+possible questions or model versions.
+
 The `hostContract.test.ts` suite uses Anna's official `mountBundle` harness
 to verify manifest permissions, storage calls, Socratic model requests, and
 permission denials. These tests do not need the Python bridge.
